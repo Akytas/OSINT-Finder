@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
   relationships: 'osint_relationships',
   timeline: 'osint_timeline',
   evidence: 'osint_evidence',
-  tasks: 'osint_tasks'
+  tasks: 'osint_tasks',
+  entityValidations: 'osint_entity_validations'
 };
 let exportDirectoryHandle = null;
 let photoPreviewObjectUrl = null;
@@ -28,10 +29,18 @@ let forensicDetailsOpen = false;
 let loadingRunId = 0;
 let SAFE_MODE = false;
 let METHODOLOGY_LOG = [];
+let ENTITY_VALIDATION_QUEUE = [];
+syncEntityValidationQueue();
 
 function syncMethodologyLog() {
   if (typeof window !== 'undefined') {
     window.METHODOLOGY_LOG = METHODOLOGY_LOG;
+  }
+}
+
+function syncEntityValidationQueue() {
+  if (typeof window !== 'undefined') {
+    window.ENTITY_VALIDATION_QUEUE = ENTITY_VALIDATION_QUEUE;
   }
 }
 
@@ -159,6 +168,75 @@ function deduplicateByFuzzyMatch(items) {
   });
 
   return groups;
+}
+
+function showEntityValidation(candidates) {
+  const panel = document.getElementById('entity-validation-panel');
+  const itemsDiv = document.getElementById('validation-items');
+
+  if (!panel || !itemsDiv || !Array.isArray(candidates) || candidates.length === 0) {
+    showAlert('Není co ověřovat.');
+    return;
+  }
+
+  itemsDiv.innerHTML = candidates
+    .map((candidate, index) => {
+      const label =
+        candidate && (candidate.label || candidate[0])
+          ? candidate.label || candidate[0]
+          : 'Unknown';
+      const url =
+        candidate && (candidate.url || candidate[1]) ? candidate.url || candidate[1] : '(no URL)';
+      return `
+        <div style="padding: 8px; border-bottom: 1px solid #eee;">
+          <strong>${index + 1}. ${label}</strong>
+          <br><small style="color: #666;">URL: ${url}</small>
+        </div>
+      `;
+    })
+    .join('');
+
+  panel.style.display = 'block';
+  ENTITY_VALIDATION_QUEUE = candidates;
+  syncEntityValidationQueue();
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function confirmEntityMerge() {
+  if (!ENTITY_VALIDATION_QUEUE.length) return;
+
+  const merged = ENTITY_VALIDATION_QUEUE[0];
+  merged.validatedMerge = true;
+  merged.mergedCount = ENTITY_VALIDATION_QUEUE.length;
+
+  const panel = document.getElementById('entity-validation-panel');
+  if (panel) {
+    panel.style.display = 'none';
+  }
+
+  const savedValidations = JSON.parse(localStorage.getItem(STORAGE_KEYS.entityValidations) || '[]');
+  savedValidations.push({
+    timestamp: new Date().toISOString(),
+    mergedCount: merged.mergedCount,
+    labels: ENTITY_VALIDATION_QUEUE.map((item) => item.label || item[0] || 'Unknown')
+  });
+  localStorage.setItem(STORAGE_KEYS.entityValidations, JSON.stringify(savedValidations));
+
+  ENTITY_VALIDATION_QUEUE = [];
+  syncEntityValidationQueue();
+  saveUiState();
+  showAlert(`Sloučeno ${merged.mergedCount} položek. Entita je uložena.`);
+}
+
+function rejectEntityMerge() {
+  const panel = document.getElementById('entity-validation-panel');
+  if (panel) {
+    panel.style.display = 'none';
+  }
+
+  ENTITY_VALIDATION_QUEUE = [];
+  syncEntityValidationQueue();
+  showAlert('Sloučení bylo zamítnuté.');
 }
 
 function generateVerdict(results = []) {
@@ -6923,6 +7001,7 @@ function renderResults(links) {
 
   const dedupeGroups = deduplicateByFuzzyMatch(preparedResults);
   const mergedGroups = dedupeGroups.filter((group) => group.items.length > 1);
+  window.lastDedupeGroup = dedupeGroups.length > 0 ? dedupeGroups[0].items : [];
 
   if (mergedGroups.length > 0) {
     const dedupeBox = createStatusBox({

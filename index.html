@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="OSINT Finder - nástroj pro vyhledávání veřejně dostupných informací přes webové zdroje"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="./app.js"></script>
+    <title>OSINT Finder</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-input">
+        <label for="main-query">🔎 Primarni dotaz</label>
+        <input id="main-query" placeholder="napr. Jan Novak, novak123, +420123456789" />
+        <p class="main-input-hint">
+          Pokud je vyplneny, ma prednost pred poli nize. Ostatni pole jsou doplnkova.
+        </p>
+      </div>
+      <header class="hero">
+        <div class="hero-top row-between">
+          <p class="eyebrow">OSINT WORKBENCH</p>
+          <div class="display-controls" aria-label="Nastavení zobrazení">
+            <button type="button" id="theme-toggle" class="theme-toggle">Tmavý režim</button>
+          </div>
+        </div>
+        <h1>OSINT Finder</h1>
+        <p class="small">Vyhledávání veřejně dostupných informací přes webové zdroje</p>
+      </header>
+      <div id="top-verdict" class="top-verdict" aria-live="polite">
+        🟢 Výsledek: VYSOKÁ PRAVDĚPODOBNOST (87 %)
+      </div>
+      <div id="safe-mode-alert" style="display: none" role="status" aria-live="polite">
+        🔐 Bezpečný režim aktivní (některé funkce omezeny)
+      </div>
+      <div
+        id="safe-mode-controls"
+        class="small"
+        style="display: none; margin-bottom: 10px"
+        role="group"
+        aria-label="Nastavení bezpečného režimu"
+      >
+        <label for="safe-mode-toggle" style="margin-right: 10px">
+          <input type="checkbox" id="safe-mode-toggle" aria-label="Bezpecny rezim" />
+          Bezpecny rezim
+        </label>
+        <button type="button" id="safe-mode-toggle-btn">Pouzit</button>
+        <span id="safe-mode-toggle-status" style="margin-left: 10px"></span>
+      </div>
+      <div id="alert" class="alert" style="display: none" role="alert" aria-live="assertive"></div>
+      <div
+        id="loading-status"
+        class="loading-status"
+        style="display: none"
+        role="status"
+        aria-live="polite"
+        aria-hidden="true"
+      >
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <strong id="loading-stage">Vyhledávám zdroje</strong>
+      </div>
+
+      <div class="tabs-nav" aria-label="Navigace sekcí">
+        <button type="button" data-tab="search" class="active" onclick="switchTab('search')">
+          Vyhledávání
+        </button>
+        <button type="button" data-tab="results" onclick="switchTab('results')">Výsledky</button>
+        <button type="button" data-tab="case" onclick="switchTab('case')">Případ</button>
+        <button type="button" data-tab="history" onclick="switchTab('history')">Historie</button>
+      </div>
+
+      <div id="tab-search" class="tab-section">
+        <div class="card onboarding-card" aria-label="Prvni kroky">
+          <h2 class="section-title">Prvni kroky</h2>
+          <div class="onboarding-steps" role="list">
+            <span class="onboarding-step" role="listitem">1) Vypln primarni dotaz</span>
+            <span class="onboarding-step" role="listitem">2) Zkontroluj zdroje</span>
+            <span class="onboarding-step" role="listitem">3) Spust vyhledavani</span>
+            <span class="onboarding-step" role="listitem">4) Ve Vysledcich pouzij filtr</span>
+          </div>
+          <p class="small onboarding-note">
+            Tip: pokud si nejsi jisty, nech vychozi zdroje zapnute a zacni jen jednim jasnym udajem.
+          </p>
+        </div>
+
+        <div class="card search-card">
+          <h2 class="section-title">Vyhledávání</h2>
+          <details class="main-actions-more search-advanced-panel">
+            <summary>Pokročilé upřesnění dotazu</summary>
+            <div class="workflow-picker row">
+              <label for="workflow-preset">Scenar prace</label>
+              <select id="workflow-preset" aria-label="Scenar prace">
+                <option value="person" selected>OSINT setreni osoby</option>
+                <option value="relationship">Propojeni objektu a vazeb</option>
+                <option value="photo">Foto analyza</option>
+                <option value="full">Vsechny moduly</option>
+              </select>
+            </div>
+            <div class="form-grid">
+              <div>
+                <label for="name">Jméno / osoba</label>
+                <input id="name" placeholder="např. Jan Novák" aria-label="Jméno nebo osoba" />
+              </div>
+              <div>
+                <label for="nick">Přezdívka / nick</label>
+                <input id="nick" placeholder="např. novak123" aria-label="Přezdívka nebo nick" />
+              </div>
+              <div>
+                <label for="city">Město (volitelné)</label>
+                <input id="city" placeholder="např. Praha" aria-label="Město (volitelné)" />
+              </div>
+              <div>
+                <label for="phone">Telefon (volitelné)</label>
+                <input
+                  id="phone"
+                  placeholder="např. +420123456789"
+                  aria-label="Telefonní číslo (volitelné)"
+                />
+              </div>
+            </div>
+          </details>
+
+          <fieldset class="sources" aria-labelledby="sources-legend">
+            <legend id="sources-legend">Vyberte zdroje</legend>
+            <div class="source-toolbar row">
+              <input
+                id="source-filter"
+                placeholder="Filtrovat zdroje..."
+                aria-label="Filtrovat zdroje"
+              />
+              <button type="button" id="collapse-all-sources">Sbalit vše</button>
+              <button type="button" id="expand-all-sources">Rozbalit vše</button>
+            </div>
+            <div class="source-grid">
+              <section class="source-group" data-group="search" aria-label="Vyhledávače">
+                <div class="source-head">
+                  <h4>Vyhledávače</h4>
+                  <div class="group-actions" role="group" aria-label="Přepínače vyhledávačů">
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="search"
+                      data-action="all"
+                    >
+                      Vše
+                    </button>
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="search"
+                      data-action="none"
+                    >
+                      Nic
+                    </button>
+                    <button type="button" class="group-collapse" data-group="search">Sbalit</button>
+                  </div>
+                </div>
+                <div class="source-items">
+                  <label for="src_google"
+                    ><input type="checkbox" id="src_google" checked aria-label="Google" />
+                    Google</label
+                  >
+                  <label for="src_seznam"
+                    ><input type="checkbox" id="src_seznam" checked aria-label="Seznam" />
+                    Seznam</label
+                  >
+                  <label for="src_bing"
+                    ><input type="checkbox" id="src_bing" checked aria-label="Bing" /> Bing</label
+                  >
+                  <label for="src_duckduckgo"
+                    ><input type="checkbox" id="src_duckduckgo" checked aria-label="DuckDuckGo" />
+                    DuckDuckGo</label
+                  >
+                  <label for="src_startpage"
+                    ><input type="checkbox" id="src_startpage" checked aria-label="Startpage" />
+                    Startpage</label
+                  >
+                  <label for="src_qwant"
+                    ><input type="checkbox" id="src_qwant" checked aria-label="Qwant" />
+                    Qwant</label
+                  >
+                  <label for="src_yandex"
+                    ><input type="checkbox" id="src_yandex" checked aria-label="Yandex" />
+                    Yandex</label
+                  >
+                  <label for="src_yahoo"
+                    ><input type="checkbox" id="src_yahoo" checked aria-label="Yahoo" />
+                    Yahoo</label
+                  >
+                </div>
+              </section>
+
+              <section class="source-group" data-group="social" aria-label="Sociální sítě a chat">
+                <div class="source-head">
+                  <h4>Sociální sítě a chat</h4>
+                  <div class="group-actions" role="group" aria-label="Přepínače sociálních sítí">
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="social"
+                      data-action="all"
+                    >
+                      Vše
+                    </button>
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="social"
+                      data-action="none"
+                    >
+                      Nic
+                    </button>
+                    <button type="button" class="group-collapse" data-group="social">Sbalit</button>
+                  </div>
+                </div>
+                <div class="source-items">
+                  <label for="src_x"
+                    ><input type="checkbox" id="src_x" checked aria-label="X / Twitter" />
+                    X/Twitter</label
+                  >
+                  <label for="src_facebook"
+                    ><input type="checkbox" id="src_facebook" checked aria-label="Facebook" />
+                    Facebook</label
+                  >
+                  <label for="src_instagram"
+                    ><input type="checkbox" id="src_instagram" checked aria-label="Instagram" />
+                    Instagram</label
+                  >
+                  <label for="src_tiktok"
+                    ><input type="checkbox" id="src_tiktok" checked aria-label="TikTok" />
+                    TikTok</label
+                  >
+                  <label for="src_linkedin"
+                    ><input type="checkbox" id="src_linkedin" checked aria-label="LinkedIn" />
+                    LinkedIn</label
+                  >
+                  <label for="src_vk"
+                    ><input type="checkbox" id="src_vk" checked aria-label="VK" /> VK</label
+                  >
+                  <label for="src_telegram"
+                    ><input type="checkbox" id="src_telegram" checked aria-label="Telegram" />
+                    Telegram</label
+                  >
+                </div>
+              </section>
+
+              <section
+                class="source-group"
+                data-group="content"
+                aria-label="Vývoj, komunity a obsah"
+              >
+                <div class="source-head">
+                  <h4>Vývoj, komunity a obsah</h4>
+                  <div class="group-actions" role="group" aria-label="Přepínače obsahu a komunit">
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="content"
+                      data-action="all"
+                    >
+                      Vše
+                    </button>
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="content"
+                      data-action="none"
+                    >
+                      Nic
+                    </button>
+                    <button type="button" class="group-collapse" data-group="content">
+                      Sbalit
+                    </button>
+                  </div>
+                </div>
+                <div class="source-items">
+                  <label for="src_reddit"
+                    ><input type="checkbox" id="src_reddit" checked aria-label="Reddit" />
+                    Reddit</label
+                  >
+                  <label for="src_web"
+                    ><input type="checkbox" id="src_web" checked aria-label="Web" /> Web</label
+                  >
+                  <label for="src_quora"
+                    ><input type="checkbox" id="src_quora" checked aria-label="Quora" />
+                    Quora</label
+                  >
+                  <label for="src_stackoverflow"
+                    ><input
+                      type="checkbox"
+                      id="src_stackoverflow"
+                      checked
+                      aria-label="Stack Overflow"
+                    />
+                    Stack Overflow</label
+                  >
+                  <label for="src_github"
+                    ><input type="checkbox" id="src_github" checked aria-label="GitHub" />
+                    GitHub</label
+                  >
+                  <label for="src_gitlab"
+                    ><input type="checkbox" id="src_gitlab" checked aria-label="GitLab" />
+                    GitLab</label
+                  >
+                  <label for="src_images"
+                    ><input type="checkbox" id="src_images" checked aria-label="Obrázky" />
+                    Obrázky</label
+                  >
+                  <label for="src_youtube"
+                    ><input type="checkbox" id="src_youtube" checked aria-label="YouTube" />
+                    YouTube</label
+                  >
+                  <label for="src_vimeo"
+                    ><input type="checkbox" id="src_vimeo" checked aria-label="Vimeo" />
+                    Vimeo</label
+                  >
+                </div>
+              </section>
+
+              <section class="source-group" data-group="official" aria-label="Oficiální zdroje">
+                <div class="source-head">
+                  <h4>Oficiální zdroje</h4>
+                  <div class="group-actions" role="group" aria-label="Přepínače oficiálních zdrojů">
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="official"
+                      data-action="all"
+                    >
+                      Vše
+                    </button>
+                    <button
+                      type="button"
+                      class="group-toggle"
+                      data-group="official"
+                      data-action="none"
+                    >
+                      Nic
+                    </button>
+                    <button type="button" class="group-collapse" data-group="official">
+                      Sbalit
+                    </button>
+                  </div>
+                </div>
+                <div class="source-items">
+                  <label for="src_interpol"
+                    ><input type="checkbox" id="src_interpol" checked aria-label="Interpol" />
+                    Interpol</label
+                  >
+                  <label for="src_europol"
+                    ><input type="checkbox" id="src_europol" checked aria-label="Europol" />
+                    Europol</label
+                  >
+                  <label for="src_fbi_wanted"
+                    ><input type="checkbox" id="src_fbi_wanted" checked aria-label="FBI Wanted" />
+                    FBI Wanted</label
+                  >
+                  <label for="src_eu_most_wanted"
+                    ><input
+                      type="checkbox"
+                      id="src_eu_most_wanted"
+                      checked
+                      aria-label="EU Most Wanted"
+                    />
+                    EU Most Wanted</label
+                  >
+                  <label for="src_dea"
+                    ><input type="checkbox" id="src_dea" checked aria-label="DEA" /> DEA</label
+                  >
+                  <label for="src_usmarshals"
+                    ><input type="checkbox" id="src_usmarshals" checked aria-label="US Marshals" />
+                    US Marshals</label
+                  >
+                  <label for="src_nca_uk"
+                    ><input type="checkbox" id="src_nca_uk" checked aria-label="NCA UK" /> NCA
+                    UK</label
+                  >
+                  <label for="src_ofac"
+                    ><input type="checkbox" id="src_ofac" checked aria-label="OFAC Sanctions" />
+                    OFAC Sanctions</label
+                  >
+                  <label for="src_eu_sanctions"
+                    ><input
+                      type="checkbox"
+                      id="src_eu_sanctions"
+                      checked
+                      aria-label="EU Sanctions"
+                    />
+                    EU Sanctions</label
+                  >
+                  <label for="src_un_sanctions"
+                    ><input
+                      type="checkbox"
+                      id="src_un_sanctions"
+                      checked
+                      aria-label="UN Sanctions"
+                    />
+                    UN Sanctions</label
+                  >
+                </div>
+              </section>
+            </div>
+          </fieldset>
+
+          <div class="main-actions" aria-label="Hlavni akce vyhledavani">
+            <div class="row main-actions-primary">
+              <button type="button" id="search-all-btn" class="action-primary">
+                Spustit vyhledavani
+              </button>
+              <button type="button" class="action-secondary" onclick="refineResults()">
+                Filtrovat posledni vysledky
+              </button>
+              <span class="refine-hint" aria-live="polite"
+                >Filtruje posledni vysledky podle mesta.</span
+              >
+            </div>
+            <div class="row main-actions-options">
+              <span id="active-source-count" class="source-count" aria-live="polite"></span>
+              <label class="strict-toggle" for="real-match-only">
+                <input type="checkbox" id="real-match-only" aria-label="Pouze realne shody" />
+                Pouze realne shody
+              </label>
+              <button type="button" id="reset-sources-btn" class="action-secondary">
+                Obnovit zdroje
+              </button>
+              <button type="button" id="clear-inputs-btn" class="action-secondary">
+                Vycistit pole
+              </button>
+            </div>
+            <details class="main-actions-more">
+              <summary>Pokrocile akce</summary>
+              <div class="row main-actions-utility">
+                <button type="button" id="new-search-btn" onclick="startNewSearch()">
+                  Reset hledani
+                </button>
+                <button type="button" id="new-case-btn" onclick="startNewCase()">
+                  Novy pripad
+                </button>
+                <button type="button" id="export-csv-btn">Export CSV</button>
+                <button type="button" id="export-txt-btn">Export TXT</button>
+                <button type="button" id="save-person-btn">Ulozit osobu</button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-case" class="tab-section hidden">
+          <div class="template-panel" id="case-panel" aria-label="Režim případu a audit">
+            <h3 class="template-title">Režim případu a audit</h3>
+            <button type="button" onclick="showEntityValidation(window.lastDedupeGroup || [])" style="margin-bottom: 10px;">
+              Validovat entity
+            </button>
+            <div id="entity-validation-panel" class="card" style="display: none; margin-bottom: 12px;">
+              <h3>Ověření entit</h3>
+              <p>Jsou následující položky tatáž osoba?</p>
+              <div id="validation-items" style="border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #f9f9f9;">
+              </div>
+              <div class="row">
+                <button type="button" onclick="confirmEntityMerge()">
+                  ✓ ANO - Tatáž osoba
+                </button>
+                <button type="button" onclick="rejectEntityMerge()">
+                  ✗ NE - Jiní lidé
+                </button>
+              </div>
+            </div>
+            <div id="case-info">📁 Případ: <strong id="case-id-display"></strong></div>
+            <div class="photo-grid">
+              <div style="display: none">
+                <label for="case-id">ID případu</label>
+                <input
+                  id="case-id"
+                  placeholder="napr. CASE-20260606-AB12C"
+                  aria-label="ID případu"
+                />
+              </div>
+              <div>
+                <label for="case-title">Název případu</label>
+                <input
+                  id="case-title"
+                  placeholder="napr. Neznámá osoba - centrum"
+                  aria-label="Název případu"
+                />
+              </div>
+              <div>
+                <label for="case-operator">Operator</label>
+                <input id="case-operator" placeholder="napr. pprap. Novak" aria-label="Operator" />
+              </div>
+              <div>
+                <label for="case-reason">Důvod šetření</label>
+                <input
+                  id="case-reason"
+                  placeholder="napr. osoba v ohrožení"
+                  aria-label="Důvod šetření"
+                />
+              </div>
+            </div>
+            <div class="row template-row">
+              <button type="button" onclick="saveCaseProfile()">Uložit případ</button>
+              <button type="button" onclick="exportCaseBundle()">Spis JSON (export)</button>
+              <button type="button" id="import-case-btn">Import spisu JSON</button>
+              <input
+                type="file"
+                id="import-case-input"
+                accept="application/json,.json"
+                style="display: none"
+              />
+              <button type="button" onclick="exportCaseAuditTxt()">Audit TXT (případ)</button>
+              <span id="case-badge" class="folder-label">Případ: nenastavený</span>
+            </div>
+
+            <div class="case-workflow-hint" aria-label="Doporučený postup v případu">
+              <strong>Doporučený postup:</strong>
+              <span>1) Časová osa</span>
+              <span>2) Důkazy</span>
+              <span>3) Úkoly</span>
+              <span>4) Závěrečná zpráva</span>
+            </div>
+
+            <div class="case-dashboard" aria-label="Dashboard případu">
+              <div class="case-kpi">
+                <strong>Entity</strong><span id="case-kpi-entities">0</span>
+              </div>
+              <div class="case-kpi">
+                <strong>Vazby</strong><span id="case-kpi-relationships">0</span>
+              </div>
+              <div class="case-kpi">
+                <strong>Prilohy</strong><span id="case-kpi-evidence">0</span>
+              </div>
+              <div class="case-kpi">
+                <strong>Udalosti</strong><span id="case-kpi-timeline">0</span>
+              </div>
+              <div class="case-kpi case-kpi-wide">
+                <strong>Posledni zmena</strong><span id="case-kpi-last-update">-</span>
+              </div>
+            </div>
+
+            <div class="case-grid-panels">
+              <section class="case-panel" aria-label="Časová osa případu">
+                <h4>Časová osa případu</h4>
+                <div class="row template-row">
+                  <input
+                    id="timeline-title"
+                    placeholder="Název události"
+                    aria-label="Název události"
+                  />
+                  <input
+                    id="timeline-description"
+                    placeholder="Popis udalosti"
+                    aria-label="Popis udalosti"
+                  />
+                  <button type="button" id="timeline-add-btn">Pridat udalost</button>
+                </div>
+                <div id="timeline-list" class="case-list"></div>
+              </section>
+
+              <section class="case-panel" aria-label="Důkazy a přílohy">
+                <h4>Důkazy a přílohy</h4>
+                <div class="row template-row">
+                  <input
+                    type="file"
+                    id="evidence-file"
+                    accept="image/*,application/pdf,text/plain,.txt"
+                    aria-label="Vyber prilohy"
+                  />
+                  <button type="button" id="evidence-add-btn">Pripojit soubor</button>
+                </div>
+                <div id="evidence-list" class="case-list"></div>
+              </section>
+
+              <section class="case-panel" aria-label="Checklist ukolu">
+                <h4>Checklist ukolu</h4>
+                <div class="row template-row">
+                  <input id="task-title" placeholder="Název úkolu" aria-label="Název úkolu" />
+                  <button type="button" id="task-add-btn">Pridat ukol</button>
+                </div>
+                <div id="task-list" class="case-list"></div>
+              </section>
+
+              <section class="case-panel" aria-label="Doporuceni asistenta">
+                <h4>Vysetrovaci asistent (pravidlovy)</h4>
+                <div class="row template-row">
+                  <button type="button" id="assistant-refresh-btn">Obnovit doporuceni</button>
+                </div>
+                <div id="assistant-recommendations" class="case-list"></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="template-panel" id="final-report-panel" aria-label="Úřední report">
+            <h3 class="template-title">Úřední report (hlavní výstup)</h3>
+            <p class="small">
+              Tento výstup je určen jako hlavní příloha k záznamu. CSV, JSON a audit zůstávají
+              technické doplňky.
+            </p>
+            <div class="final-report-grid">
+              <div class="full">
+                <label for="final-summary">Strucne shrnuti zjisteni</label>
+                <textarea
+                  id="final-summary"
+                  placeholder="Napiste hlavni zjisteni (napr. 3-6 bodu)."
+                  aria-label="Strucne shrnuti zjisteni"
+                ></textarea>
+              </div>
+              <div>
+                <label for="final-risk-notes">Zavadove informace</label>
+                <textarea
+                  id="final-risk-notes"
+                  placeholder="Napiste zavazne body, kazdy na novy radek."
+                  aria-label="Zavadove informace"
+                ></textarea>
+              </div>
+              <div>
+                <label for="final-cases-notes">Kauzy / audit</label>
+                <textarea
+                  id="final-cases-notes"
+                  placeholder="Napiste znamou kauzu nebo auditni zaznam na radek."
+                  aria-label="Kauzy a auditni zaznamy"
+                ></textarea>
+              </div>
+              <div>
+                <label for="final-connections-notes">Spojitosti a vazby</label>
+                <textarea
+                  id="final-connections-notes"
+                  placeholder="Osoby, ucty, domeny, lokality - na radky."
+                  aria-label="Spojitosti a vazby"
+                ></textarea>
+              </div>
+              <div>
+                <label for="final-next-steps">Dalsi kroky</label>
+                <textarea
+                  id="final-next-steps"
+                  placeholder="Co overit hned / co monitorovat."
+                  aria-label="Dalsi kroky"
+                ></textarea>
+              </div>
+            </div>
+            <div class="row template-row">
+              <button type="button" onclick="exportFinalReportPdf()">Úřední report PDF</button>
+              <button type="button" onclick="exportFinalReportTxt()">Úřední report TXT</button>
+            </div>
+          </div>
+
+          <div class="template-panel" id="entities-panel" aria-label="Entity a vazby">
+            <h3 class="template-title">Entity a vazby</h3>
+            <div class="entity-layout">
+              <div class="entity-panel">
+                <h4>Levy panel: entity</h4>
+                <div class="row template-row">
+                  <input
+                    id="entity-filter"
+                    placeholder="Filtrovat entity..."
+                    aria-label="Filtrovat entity"
+                  />
+                  <select id="entity-type-filter" aria-label="Filtr typu entity">
+                    <option value="all">Vsechny typy</option>
+                    <option value="person">Osoby</option>
+                    <option value="email">E-maily</option>
+                    <option value="phone">Telefony</option>
+                    <option value="domain">Domeny</option>
+                    <option value="vehicle">Vozidla</option>
+                    <option value="organization">Organizace</option>
+                    <option value="image">Obrazky</option>
+                  </select>
+                </div>
+                <div class="row template-row">
+                  <select id="new-entity-type" aria-label="Typ nove entity">
+                    <option value="person">Osoba</option>
+                    <option value="phone">Telefon</option>
+                    <option value="email">E-mail</option>
+                    <option value="domain">Domena</option>
+                    <option value="web">Web</option>
+                    <option value="social">Socialni ucet</option>
+                    <option value="image">Obrazek</option>
+                    <option value="vehicle">Vozidlo</option>
+                    <option value="organization">Organizace</option>
+                    <option value="address">Adresa</option>
+                    <option value="document">Dokument</option>
+                    <option value="note">Poznamka</option>
+                  </select>
+                  <input
+                    id="new-entity-name"
+                    placeholder="Název entity"
+                    aria-label="Název entity"
+                  />
+                  <input
+                    id="new-entity-description"
+                    placeholder="Popis (volitelne)"
+                    aria-label="Popis entity"
+                  />
+                  <button type="button" id="add-entity-btn">Pridat entitu</button>
+                </div>
+                <div id="entity-list" class="entity-list"></div>
+                <p id="entity-stats" class="small"></p>
+              </div>
+              <div class="entity-panel">
+                <h4>Pravy panel: detail entity</h4>
+                <div id="entity-detail"></div>
+                <div id="entity-auto-suggestions" class="entity-suggestions"></div>
+                <h4>Graf vztahu</h4>
+                <div id="entity-graph" class="entity-graph" aria-label="Graf vztahu entit"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="template-panel" id="templates-panel" aria-label="Šablony zdrojů">
+            <h3 class="template-title">Šablony zdrojů</h3>
+            <div class="row template-row">
+              <select id="template-select" aria-label="Výběr šablony"></select>
+              <button type="button" id="apply-template-btn">Použít šablonu</button>
+              <button type="button" id="delete-template-btn">Smazat vlastní</button>
+            </div>
+            <div class="row template-row">
+              <input
+                id="template-name"
+                placeholder="Název nové šablony"
+                aria-label="Název nové šablony"
+              />
+              <button type="button" id="save-template-btn">Uložit aktuální výběr</button>
+            </div>
+            <div class="row template-row">
+              <button type="button" id="pick-export-folder-btn">Vybrat slozku exportu</button>
+              <span id="export-folder-label" class="folder-label"
+                >Slozka: standardni stahovani</span
+              >
+            </div>
+            <div class="row template-row">
+              <button type="button" id="export-json-btn">Globalni JSON export</button>
+              <button type="button" id="import-json-btn">Globalni JSON import</button>
+              <input
+                type="file"
+                id="import-json-input"
+                accept="application/json,.json"
+                style="display: none"
+              />
+            </div>
+          </div>
+
+          <div
+            class="photo-search-panel"
+            id="photo-panel"
+            aria-label="Vyhledavani podle fotografie"
+          >
+            <h3 class="template-title">Vyhledavani podle fotografie</h3>
+            <div class="photo-grid">
+              <div>
+                <label for="photo-url">URL obrazku (pro Lens/Yandex/TinEye)</label>
+                <input
+                  id="photo-url"
+                  placeholder="napr. https://example.com/foto.jpg"
+                  aria-label="URL obrazku"
+                />
+                <p class="photo-help">
+                  Funguje okamzite bez backendu. Obrazek musi byt verejne dostupny.
+                </p>
+              </div>
+              <div>
+                <label for="photo-endpoint">Backend endpoint (volitelne, pro upload souboru)</label>
+                <input
+                  id="photo-endpoint"
+                  placeholder="napr. http://localhost:8787/api/reverse-image"
+                  aria-label="Backend endpoint pro vyhledani fotky"
+                />
+                <p class="photo-help">
+                  Endpoint prijima image/jpeg, image/png nebo image/webp (max 12 MB) a vraci JSON s
+                  odkazy.
+                </p>
+              </div>
+            </div>
+            <div class="row template-row">
+              <input
+                type="file"
+                id="photo-file"
+                accept="image/jpeg,image/png,image/webp"
+                aria-label="Vyber fotografie"
+              />
+              <button type="button" id="photo-url-search-btn">Foto hledani z URL</button>
+              <button type="button" id="photo-api-search-btn">Foto OSINT hledani</button>
+            </div>
+            <div class="photo-dashboard-tools">
+              <div class="row photo-dashboard-row">
+                <label for="photo-domain-filter">Doména</label>
+                <select id="photo-domain-filter" aria-label="Filtr domény">
+                  <option value="all">Všechny domény</option>
+                </select>
+                <label for="photo-min-score">Min. relevance</label>
+                <input
+                  id="photo-min-score"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="0"
+                  aria-label="Minimální relevance"
+                />
+                <label for="photo-sort-mode">Řazení</label>
+                <select id="photo-sort-mode" aria-label="Řazení foto výsledků">
+                  <option value="relevance" selected>Podle relevance</option>
+                  <option value="domain">Podle domény</option>
+                  <option value="timeline">Časová osa</option>
+                </select>
+              </div>
+              <div class="row photo-dashboard-row">
+                <button type="button" id="photo-export-json-btn">Foto dashboard JSON export</button>
+                <button type="button" id="photo-export-csv-btn">Foto dashboard CSV export</button>
+              </div>
+            </div>
+            <img id="photo-preview" class="photo-preview" alt="Nahled nahrane fotografie" />
+            <div id="photo-analysis" class="photo-analysis" aria-live="polite"></div>
+            <div
+              id="photo-dashboard"
+              class="photo-dashboard"
+              style="display: none"
+              aria-label="Foto dashboard"
+            ></div>
+          </div>
+        </div>
+
+        <div id="tab-history" class="tab-section hidden">
+          <div class="card history-panel" id="search-history-card" style="display: none">
+            <div class="row row-between">
+              <h3>Panel historie vyhledávání</h3>
+              <div class="row">
+                <button type="button" id="history-export-json-btn">Historie JSON export</button>
+                <button type="button" id="history-export-csv-btn">Historie CSV export</button>
+              </div>
+            </div>
+            <p class="small history-note">
+              Historie je pouze referenční panel. Nepoužívá se jako aktivní vstup pro aktuální
+              výsledky.
+            </p>
+            <div class="row history-toolbar">
+              <label for="search-history-filter">Typ</label>
+              <select id="search-history-filter" aria-label="Filtrovat historii podle typu">
+                <option value="all" selected>Vše</option>
+                <option value="search_all">Hledat všude</option>
+                <option value="search_photo_url">Foto z URL</option>
+                <option value="search_photo_api">Foto OSINT</option>
+              </select>
+              <label for="search-history-text-filter">Text</label>
+              <input
+                id="search-history-text-filter"
+                placeholder="Filtrovat historii..."
+                aria-label="Filtrovat historii podle textu"
+              />
+            </div>
+            <div class="history-summary" id="search-history-summary"></div>
+            <div class="history-compare-grid">
+              <div>
+                <label for="search-history-left">Porovnání A</label>
+                <select id="search-history-left" aria-label="První záznam pro porovnání"></select>
+              </div>
+              <div>
+                <label for="search-history-right">Porovnání B</label>
+                <select id="search-history-right" aria-label="Druhý záznam pro porovnání"></select>
+              </div>
+            </div>
+            <div class="row history-toolbar">
+              <button type="button" id="search-history-compare-btn">Porovnat</button>
+              <span id="search-history-compare-output" class="small"></span>
+            </div>
+            <div id="search-history-list" class="history-list"></div>
+          </div>
+        </div>
+
+        <div id="tab-results" class="tab-section hidden">
+          <div id="verdict-panel" class="card" style="display: none">
+            <h3>🧠 Shrnutí</h3>
+            <p id="verdict-summary"></p>
+
+            <h4>⚠️ Upozornění</h4>
+            <ul id="verdict-warnings"></ul>
+
+            <h4>🧭 Co z toho plyne</h4>
+            <p id="verdict-explanation"></p>
+
+            <h4>✅ Doporučení</h4>
+            <ul id="verdict-recommendations"></ul>
+
+            <h4>🚀 Doporučené kroky</h4>
+            <ul id="verdict-actions"></ul>
+          </div>
+
+          <div id="refine-panel" class="card simple-ui-advanced">
+            <h3>🔍 Filtr vysledku (upresneni)</h3>
+            <input id="refine-text" placeholder="doplňující údaj (město, nick...)" />
+            <p>💡 Filtr nezahaji nove vyhledavani, pouze zpresni aktualni vysledky.</p>
+            <div class="row template-row">
+              <button type="button" onclick="applyRefinement()">Použít upřesnění</button>
+              <button type="button" id="refine-undo-btn" onclick="undoRefinement()">
+                Zpět o krok
+              </button>
+              <button type="button" onclick="resetRefinement()">Resetovat</button>
+            </div>
+            <div id="refine-history" class="refine-history" aria-live="polite"></div>
+          </div>
+
+          <div class="card" id="results-card" style="display: none">
+            <div class="row row-between results-toolbar">
+              <h3>Vysledky overeni</h3>
+              <div class="results-toolbar-cluster">
+                <div class="row results-tools">
+                  <div class="results-filters-basic">
+                    <label for="results-sort">Razeni</label>
+                    <select id="results-sort" aria-label="Řazení výsledků">
+                      <option value="validity" selected>Podle validity</option>
+                      <option value="source">Podle zdroje</option>
+                    </select>
+                    <label for="results-min-confidence">Min. duvera</label>
+                    <input
+                      id="results-min-confidence"
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="0"
+                      aria-label="Minimální důvěra"
+                    />
+                    <span id="results-min-confidence-value" class="filter-value">0%</span>
+                  </div>
+                  <details class="results-filters-advanced" open>
+                    <summary>Pokrocile filtry</summary>
+                    <div class="row results-filters-advanced-grid">
+                      <label class="raw-toggle" for="results-only-manipulated">
+                        <input
+                          type="checkbox"
+                          id="results-only-manipulated"
+                          aria-label="Pouze manipulované"
+                        />
+                        Jen manipulovane
+                      </label>
+                      <label class="raw-toggle" for="results-only-trusted">
+                        <input
+                          type="checkbox"
+                          id="results-only-trusted"
+                          aria-label="Pouze důvěryhodné domény"
+                        />
+                        Jen duveryhodne domeny
+                      </label>
+                      <label class="raw-toggle" id="results-raw-toggle" for="results-raw-mode">
+                        <input type="checkbox" id="results-raw-mode" aria-label="Bez deduplikace" />
+                        Bez deduplikace (raw)
+                      </label>
+                    </div>
+                  </details>
+                </div>
+                <div class="row results-actions">
+                  <button type="button" onclick="switchTab('search')">← Zpet na hledani</button>
+                  <button type="button" onclick="exportPdfReport()">PDF zprava</button>
+                  <button type="button" onclick="exportReportJson()">JSON zprava</button>
+                  <button type="button" onclick="openAllResults()">Otevrit vse</button>
+                  <button type="button" onclick="copyAllResults()">Kopirovat vse</button>
+                </div>
+              </div>
+            </div>
+            <div id="confidence-legend" class="confidence-legend" aria-label="Legenda důvěry">
+              <span class="legend-item legend-high">🟢 VYSOKÁ (80-100 %)</span>
+              <span class="legend-item legend-medium">🟡 STŘEDNÍ (50-79 %)</span>
+              <span class="legend-item legend-low">🔴 NÍZKÁ (0-49 %)</span>
+            </div>
+            <div id="results-summary" class="results-summary" aria-live="polite"></div>
+            <div id="results-list"></div>
+          </div>
+        </div>
+
+        <div class="card" id="persons-card" style="display: none">
+          <h3>Vybrané osoby</h3>
+          <div id="persons-list"></div>
+        </div>
+
+        <details class="card quick-search-card">
+          <summary class="section-title">Rychle odkazy</summary>
+          <p class="small quick-search-hint">
+            Jednotlive odkazy pro rychly otevreny pruzkum. Hlavni workflow je vyse v sekci
+            vyhledavani.
+          </p>
+          <div class="quick-tiles">
+            <button
+              type="button"
+              class="tile"
+              title="Google"
+              aria-label="Google"
+              onclick="searchGoogle()"
+            >
+              <span class="icon">🔎</span>
+              <span>Google</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Reddit"
+              aria-label="Reddit"
+              onclick="searchReddit()"
+            >
+              <span class="icon">👽</span>
+              <span>Reddit</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="X / Twitter"
+              aria-label="X / Twitter"
+              onclick="searchX()"
+            >
+              <span class="icon">🐦</span>
+              <span>X / Twitter</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Web diskuze"
+              aria-label="Web diskuze"
+              onclick="searchWeb()"
+            >
+              <span class="icon">💬</span>
+              <span>Web</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Obrázky"
+              aria-label="Obrázky"
+              onclick="searchImages()"
+            >
+              <span class="icon">🖼️</span>
+              <span>Obrázky</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="LinkedIn"
+              aria-label="LinkedIn"
+              onclick="searchLinkedIn()"
+            >
+              <span class="icon">💼</span>
+              <span>LinkedIn</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Facebook"
+              aria-label="Facebook"
+              onclick="searchFacebook()"
+            >
+              <span class="icon">📘</span>
+              <span>Facebook</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Instagram"
+              aria-label="Instagram"
+              onclick="searchInstagram()"
+            >
+              <span class="icon">📸</span>
+              <span>Instagram</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="GitHub"
+              aria-label="GitHub"
+              onclick="searchGitHub()"
+            >
+              <span class="icon">🐙</span>
+              <span>GitHub</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="YouTube"
+              aria-label="YouTube"
+              onclick="searchYouTube()"
+            >
+              <span class="icon">▶️</span>
+              <span>YouTube</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="TikTok"
+              aria-label="TikTok"
+              onclick="searchTikTok()"
+            >
+              <span class="icon">🎵</span>
+              <span>TikTok</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Seznam"
+              aria-label="Seznam"
+              onclick="searchSeznam()"
+            >
+              <span class="icon">🧭</span>
+              <span>Seznam</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Bing"
+              aria-label="Bing"
+              onclick="searchBing()"
+            >
+              <span class="icon">🅱️</span>
+              <span>Bing</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="DuckDuckGo"
+              aria-label="DuckDuckGo"
+              onclick="searchDuckDuckGo()"
+            >
+              <span class="icon">🦆</span>
+              <span>DuckDuckGo</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Telegram"
+              aria-label="Telegram"
+              onclick="searchTelegram()"
+            >
+              <span class="icon">✈️</span>
+              <span>Telegram</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Quora"
+              aria-label="Quora"
+              onclick="searchQuora()"
+            >
+              <span class="icon">Q</span>
+              <span>Quora</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Stack Overflow"
+              aria-label="Stack Overflow"
+              onclick="searchStackOverflow()"
+            >
+              <span class="icon">🧱</span>
+              <span>Stack Overflow</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="GitLab"
+              aria-label="GitLab"
+              onclick="searchGitLab()"
+            >
+              <span class="icon">🦊</span>
+              <span>GitLab</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Startpage"
+              aria-label="Startpage"
+              onclick="searchStartpage()"
+            >
+              <span class="icon">S</span>
+              <span>Startpage</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Qwant"
+              aria-label="Qwant"
+              onclick="searchQwant()"
+            >
+              <span class="icon">Qw</span>
+              <span>Qwant</span>
+            </button>
+            <button type="button" class="tile" title="VK" aria-label="VK" onclick="searchVK()">
+              <span class="icon">VK</span>
+              <span>VK</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Yandex"
+              aria-label="Yandex"
+              onclick="searchYandex()"
+            >
+              <span class="icon">Y</span>
+              <span>Yandex</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Yahoo"
+              aria-label="Yahoo"
+              onclick="searchYahoo()"
+            >
+              <span class="icon">Ya</span>
+              <span>Yahoo</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Vimeo"
+              aria-label="Vimeo"
+              onclick="searchVimeo()"
+            >
+              <span class="icon">V</span>
+              <span>Vimeo</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Interpol"
+              aria-label="Interpol"
+              onclick="searchInterpol()"
+            >
+              <span class="icon">IN</span>
+              <span>Interpol</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="Europol"
+              aria-label="Europol"
+              onclick="searchEuropol()"
+            >
+              <span class="icon">EU</span>
+              <span>Europol</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="FBI Wanted"
+              aria-label="FBI Wanted"
+              onclick="searchFbiWanted()"
+            >
+              <span class="icon">FB</span>
+              <span>FBI Wanted</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="EU Most Wanted"
+              aria-label="EU Most Wanted"
+              onclick="searchEuMostWanted()"
+            >
+              <span class="icon">MW</span>
+              <span>EU Most Wanted</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="DEA"
+              aria-label="DEA"
+              onclick="searchDeaFugitives()"
+            >
+              <span class="icon">DE</span>
+              <span>DEA</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="US Marshals"
+              aria-label="US Marshals"
+              onclick="searchUsMarshals()"
+            >
+              <span class="icon">US</span>
+              <span>US Marshals</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="NCA UK"
+              aria-label="NCA UK"
+              onclick="searchNcaUk()"
+            >
+              <span class="icon">NC</span>
+              <span>NCA UK</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="OFAC Sanctions"
+              aria-label="OFAC Sanctions"
+              onclick="searchOfacSanctions()"
+            >
+              <span class="icon">OF</span>
+              <span>OFAC</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="EU Sanctions"
+              aria-label="EU Sanctions"
+              onclick="searchEuSanctions()"
+            >
+              <span class="icon">ES</span>
+              <span>EU Sanctions</span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              title="UN Sanctions"
+              aria-label="UN Sanctions"
+              onclick="searchUnSanctions()"
+            >
+              <span class="icon">UN</span>
+              <span>UN Sanctions</span>
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <p class="legal-note">
+        Používejte pouze pro legální práci s veřejně dostupnými informacemi a vždy respektujte
+        soukromí i platné zákony.
+      </p>
+      <p class="signature-note">
+        DanielN (autor) x Copilot Codex, AI asistent (technická spolupráce)
+      </p>
+    </div>
+  </body>
+</html>
