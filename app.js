@@ -55,6 +55,47 @@ function logMethodologyStep(sourceId, sourceName, query, foundCount) {
 
 syncMethodologyLog();
 
+function calculateConfidenceScore(sourceLabel, item) {
+  let score = 0;
+  const sourceText = String(sourceLabel || '').toLowerCase();
+
+  if (sourceText.includes('linkedin') || sourceText.includes('github')) {
+    score += 20;
+  }
+
+  const itemStr = JSON.stringify(item || {}).toLowerCase();
+  if (itemStr.includes('bio') || itemStr.includes('description') || itemStr.includes('about')) {
+    score += 15;
+  }
+
+  if (itemStr.length > 200) {
+    score += 25;
+  }
+
+  const query = normalizeWhitespace(getQuery()).toLowerCase();
+  const rawLabel = Array.isArray(item)
+    ? String(item[0] || '')
+    : String((item && (item.label || item[0])) || '');
+  const itemLabel = rawLabel.toLowerCase();
+  if (query && (itemLabel.includes(query) || query.includes(itemLabel))) {
+    score += 30;
+  }
+
+  const trustedDomains = ['linkedin', 'github', 'gitlab', 'interpol', 'ofac', 'europol', 'fbi'];
+  const isTrusted = trustedDomains.some((domain) => sourceText.includes(domain));
+  if (isTrusted) {
+    score += 10;
+  }
+
+  return Math.min(100, score);
+}
+
+function getConfidenceLabel(score) {
+  if (score >= 75) return 'VYSOKÁ';
+  if (score >= 50) return 'STŘEDNÍ';
+  return 'NÍZKÁ';
+}
+
 function generateVerdict(results = []) {
   if (!Array.isArray(results) || results.length === 0) {
     const actions = [];
@@ -5000,6 +5041,30 @@ async function exportPdfReport() {
     doc.text(noteLines, 40, y);
     y += noteLines.length * 12 + 6;
 
+    y += 10;
+    doc.setFontSize(12);
+    doc.text('RELEVANCE ZDROJŮ', 40, y);
+    y += 14;
+
+    doc.setFontSize(10);
+    links.forEach((link) => {
+      const sourceLabel = Array.isArray(link)
+        ? String(link[0] || '')
+        : String((link && (link.label || link.source || link.title)) || '');
+      const confidence = calculateConfidenceScore(sourceLabel || '', link);
+      const label = getConfidenceLabel(confidence);
+      const line = `${sourceLabel} | ${label} (${confidence}%)`;
+      const wrapped = doc.splitTextToSize(line, 510);
+
+      if (y + wrapped.length * 12 > 790) {
+        doc.addPage();
+        y = 42;
+      }
+
+      doc.text(wrapped, 40, y);
+      y += wrapped.length * 12 + 2;
+    });
+
     doc.setFontSize(11);
     doc.text(`Pocet odkazu: ${links.length}`, 40, y);
     y += 16;
@@ -6737,7 +6802,9 @@ function renderResults(links) {
     anchor.href = item.url;
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
-    anchor.textContent = `${index + 1}. ${item.label}`;
+    const confidence = calculateConfidenceScore(item.label || '', item);
+    const label = getConfidenceLabel(confidence);
+    anchor.textContent = `${index + 1}. ${item.label} | ${confidence}% (${label})`;
     li.appendChild(anchor);
     guaranteedList.appendChild(li);
   });
