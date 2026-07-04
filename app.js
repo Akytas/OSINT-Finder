@@ -5812,31 +5812,99 @@ function deriveReportEndpoint() {
 
 async function fetchGeneratedReportJson() {
   const endpoint = deriveReportEndpoint();
-  if (!endpoint || !lastPhotoDashboard) {
-    return null;
+  if (!lastPhotoDashboard) {
+    const error = new Error('No photo dashboard data');
+    error.code = 'NO_DASHBOARD';
+    throw error;
   }
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      results: Array.isArray(lastPhotoDashboard.results) ? lastPhotoDashboard.results : [],
-      analysis: lastPhotoDashboard.analysis || {},
-      warnings: Array.isArray(lastPhotoDashboard.warnings) ? lastPhotoDashboard.warnings : [],
-      candidates: Array.isArray(lastPhotoDashboard.candidates) ? lastPhotoDashboard.candidates : [],
-      hashes: lastPhotoDashboard.hashes || null,
-      exif: lastPhotoDashboard.exif || null
-    })
-  });
+  if (!endpoint) {
+    const error = new Error('Invalid photo endpoint');
+    error.code = 'INVALID_ENDPOINT';
+    throw error;
+  }
+
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        results: Array.isArray(lastPhotoDashboard.results) ? lastPhotoDashboard.results : [],
+        analysis: lastPhotoDashboard.analysis || {},
+        warnings: Array.isArray(lastPhotoDashboard.warnings) ? lastPhotoDashboard.warnings : [],
+        candidates: Array.isArray(lastPhotoDashboard.candidates)
+          ? lastPhotoDashboard.candidates
+          : [],
+        hashes: lastPhotoDashboard.hashes || null,
+        exif: lastPhotoDashboard.exif || null
+      })
+    });
+  } catch {
+    const error = new Error('Report endpoint unreachable');
+    error.code = 'UNREACHABLE';
+    error.endpoint = endpoint;
+    throw error;
+  }
 
   if (!response.ok) {
-    throw new Error(`Report endpoint returned ${response.status}`);
+    let details = '';
+    try {
+      const payload = await response.json();
+      details = normalizeWhitespace(payload && (payload.error || payload.details));
+    } catch {
+      details = '';
+    }
+
+    const error = new Error(details || `Report endpoint returned ${response.status}`);
+    error.code = `HTTP_${response.status}`;
+    error.endpoint = endpoint;
+    throw error;
   }
 
   const payload = await response.json();
-  return payload && typeof payload === 'object' ? payload : null;
+  if (!payload || typeof payload !== 'object') {
+    const error = new Error('Report payload invalid');
+    error.code = 'INVALID_PAYLOAD';
+    error.endpoint = endpoint;
+    throw error;
+  }
+
+  return payload;
+}
+
+function getReportJsonExportHint(errorLike) {
+  const code = String((errorLike && errorLike.code) || '').toUpperCase();
+  const endpoint = normalizeWhitespace((errorLike && errorLike.endpoint) || deriveReportEndpoint());
+
+  if (code === 'NO_DASHBOARD') {
+    return 'JSON report vyzaduje foto analyzu. Spuste nejdriv Foto OSINT hledani a pak export opakujte.';
+  }
+
+  if (code === 'INVALID_ENDPOINT') {
+    return 'JSON report nelze vytvorit: zkontrolujte pole Backend endpoint (ma smerovat na /api/reverse-image).';
+  }
+
+  if (code === 'UNREACHABLE') {
+    return `JSON report nelze vytvorit: backend neni dostupny (${endpoint || 'neznamy endpoint'}). Spuste server.`;
+  }
+
+  if (code.startsWith('HTTP_')) {
+    return `JSON report selhal na backendu (${code.replace('HTTP_', 'HTTP ')}). Zkontrolujte log serveru.`;
+  }
+
+  if (code === 'INVALID_PAYLOAD') {
+    return 'JSON report nelze vytvorit: backend vratil neplatna data.';
+  }
+
+  const fallbackMessage = normalizeWhitespace(errorLike && errorLike.message);
+  if (fallbackMessage) {
+    return `JSON report nelze vytvorit: ${fallbackMessage}`;
+  }
+
+  return 'JSON report nelze vytvorit. Spuste foto analyzu a overte backend endpoint.';
 }
 
 async function exportReportJson() {
@@ -5853,16 +5921,18 @@ async function exportReportJson() {
 
   let report = reportFromPayload;
   if (!report) {
+    let exportError = null;
     try {
       report = await fetchGeneratedReportJson();
-    } catch {
+    } catch (error) {
+      exportError = error;
       report = null;
     }
-  }
 
-  if (!report) {
-    showAlert('JSON report je dostupny po foto analyze (forensic) nebo pri dostupnem backendu.');
-    return;
+    if (!report) {
+      showAlert(getReportJsonExportHint(exportError));
+      return;
+    }
   }
 
   await downloadText(
