@@ -3298,6 +3298,12 @@ function buildFinalReportText(report) {
   }
 
   addTitle('5. Entity a vazby');
+  if (report.notes && report.notes.links) {
+    addBulletList(parseManualLines(report.notes.links), 'Bez doplněných spojitostí a vazeb.');
+  }
+  if (manualConnections.length) {
+    manualConnections.forEach((line) => lines.push(`- ${line}`));
+  }
   ENTITY_TYPES.forEach((type) => {
     const count =
       report.entityStats && typeof report.entityStats[type.value] === 'number'
