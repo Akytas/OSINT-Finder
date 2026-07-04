@@ -96,6 +96,71 @@ function getConfidenceLabel(score) {
   return 'NÍZKÁ';
 }
 
+function levenshteinDistance(a, b) {
+  const left = String(a || '');
+  const right = String(b || '');
+  const leftLen = left.length;
+  const rightLen = right.length;
+  const matrix = [];
+
+  for (let i = 0; i <= rightLen; i += 1) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= leftLen; j += 1) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= rightLen; i += 1) {
+    for (let j = 1; j <= leftLen; j += 1) {
+      if (right[i - 1] === left[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[rightLen][leftLen];
+}
+
+function deduplicateByFuzzyMatch(items) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  const groups = [];
+
+  items.forEach((item) => {
+    const rawLabel = String((item && (item.label || item[0])) || '');
+    const normalized = rawLabel.toLowerCase().replace(/[._\-\s]/g, '');
+
+    if (!normalized) return;
+
+    let matched = false;
+    for (const group of groups) {
+      const distance = levenshteinDistance(normalized, group.normalized);
+      if (distance <= 2) {
+        group.items.push(item);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      groups.push({
+        normalized,
+        items: [item],
+        mainLabel: rawLabel || 'Unknown'
+      });
+    }
+  });
+
+  return groups;
+}
+
 function generateVerdict(results = []) {
   if (!Array.isArray(results) || results.length === 0) {
     const actions = [];
@@ -5065,6 +5130,49 @@ async function exportPdfReport() {
       y += wrapped.length * 12 + 2;
     });
 
+    const dedupeGroups = deduplicateByFuzzyMatch(getPreparedResults(links));
+    const mergedGroups = dedupeGroups.filter((group) => group.items.length > 1);
+
+    if (mergedGroups.length > 0) {
+      y += 10;
+      doc.setFontSize(12);
+      doc.text('DEDUPLIKOVANÉ ENTITY', 40, y);
+      y += 14;
+
+      doc.setFontSize(10);
+      mergedGroups.forEach((group) => {
+        const confidence = Math.min(100, 50 + group.items.length * 12);
+        const headerLine = `✅ ${group.mainLabel} (${confidence}%)`;
+        const headerWrapped = doc.splitTextToSize(headerLine, 510);
+
+        if (y + headerWrapped.length * 12 > 790) {
+          doc.addPage();
+          y = 42;
+        }
+
+        doc.text(headerWrapped, 40, y);
+        y += headerWrapped.length * 12 + 2;
+
+        doc.setFontSize(9);
+        group.items.forEach((item) => {
+          const subLine = `- ${item.label || item[0] || 'Unknown'}`;
+          const wrapped = doc.splitTextToSize(subLine, 500);
+
+          if (y + wrapped.length * 10 > 790) {
+            doc.addPage();
+            y = 42;
+            doc.setFontSize(9);
+          }
+
+          doc.text(wrapped, 50, y);
+          y += wrapped.length * 10 + 2;
+        });
+
+        y += 8;
+        doc.setFontSize(10);
+      });
+    }
+
     doc.setFontSize(11);
     doc.text(`Pocet odkazu: ${links.length}`, 40, y);
     y += 16;
@@ -6812,6 +6920,44 @@ function renderResults(links) {
   guaranteedListBox.appendChild(guaranteedTitle);
   guaranteedListBox.appendChild(guaranteedList);
   list.appendChild(guaranteedListBox);
+
+  const dedupeGroups = deduplicateByFuzzyMatch(preparedResults);
+  const mergedGroups = dedupeGroups.filter((group) => group.items.length > 1);
+
+  if (mergedGroups.length > 0) {
+    const dedupeBox = createStatusBox({
+      title: 'Sloučení duplicate entit',
+      text: `Původně ${preparedResults.length} výsledků, po sloučení ${dedupeGroups.length} unikátních entit.`
+    });
+
+    const dedupeDetails = document.createElement('div');
+    dedupeDetails.className = 'dedupe-groups';
+
+    mergedGroups.forEach((group) => {
+      const confidence = Math.min(100, 50 + group.items.length * 12);
+      const heading = document.createElement('p');
+      heading.className = 'result-summary';
+      heading.style.fontWeight = '700';
+      heading.style.marginTop = '8px';
+      heading.textContent = `✅ ${group.mainLabel} (${confidence}%)`;
+      dedupeDetails.appendChild(heading);
+
+      const listItems = document.createElement('ul');
+      listItems.style.margin = '4px 0 0';
+      listItems.style.paddingLeft = '18px';
+
+      group.items.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = `- ${item.label || item[0] || 'Unknown'}`;
+        listItems.appendChild(li);
+      });
+
+      dedupeDetails.appendChild(listItems);
+    });
+
+    dedupeBox.appendChild(dedupeDetails);
+    list.appendChild(dedupeBox);
+  }
 
   const photoLookup = buildPhotoResultLookup();
   const clusterLookup = buildResultClusterLookup();
