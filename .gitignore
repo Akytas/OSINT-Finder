@@ -1,19 +1,22 @@
 node_modules
-node_modules
 .env
-node_modules
-node_modules
+
+# Keep data directories in repo, ignore generated content inside
 data/*
 !data/.gitkeep
+
 !data/uploads/
+data/uploads/*
 !data/uploads/.gitkeep
+
 !data/exports/
+data/exports/*
 !data/exports/.gitkeep
+
+# Generated logs and temporary artifacts
 .test-stdout.txt
 .test-stderr.txt
 .tmp-*.log
 tmp-server-test.log
 tmp/
 debug.log
-node_modules
-node_modules
