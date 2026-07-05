@@ -1,0 +1,339 @@
+OSINT FINDER - TECHNICKA SPECIFIKACE (AKTUALNI STAV)
+====================================================
+
+Ucel dokumentu
+--------------
+Tento dokument shrnuje aktualni stav aplikace tak, aby byl citelny pro cloveka i pro dalsi AI.
+
+
+1) ARCHITEKTURA
+---------------
+Frontend:
+- index.html
+- app.js
+- style.css
+- bezi v prohlizeci
+- data uklada lokalne do localStorage
+
+Backend:
+- server.js (Express API)
+- reverse-image a OSINT doplnkove endpointy
+
+Testy:
+- node --test
+- tests/server.test.js
+- tests/manipulation.test.js
+- tests/ui-mode.test.js
+
+
+2) HLAVNI STAVY VE FRONTENDU
+---------------------------
+V runtime se pouzivaji hlavne tyto stavy:
+- lastResults: posledni sada vysledku,
+- lastPhotoAnalysis: posledni foto metadata,
+- lastPhotoDashboard: posledni foto dashboard data,
+- simpleModeDetailsOpen: otevreny detail v Simple,
+- forensicDetailsOpen: globalni rozbaleni technickych detailu,
+- photoSensitiveDetailsOpen: viditelne citlive foto detaily.
+
+LocalStorage klice:
+- osint_persons
+- osint_ui_state
+- osint_theme
+- osint_templates
+- osint_cases
+- osint_audit
+- osint_entities
+- osint_relationships
+- osint_timeline
+- osint_evidence
+- osint_tasks
+
+
+3) REZIMY VYSLEDKU
+------------------
+Jednoduchy rezim (Simple):
+- defaultni rezim,
+- rychla odpoved,
+- top vysledek a horni verdict,
+- technicke detaily skryte.
+
+Forenzni rezim (Forensic):
+- analyza vsech kandidatu,
+- vsechny pripravene vysledky,
+- centralni toggle technickych detailu,
+- rozbaleni detailu hromadne.
+
+Legacy kompatibilita:
+- interni hodnota rezimu je forensic,
+- stara hodnota advanced se mapuje na forensic.
+
+
+4) HORNi VERDIKT
+----------------
+Aktualni verdict panel zobrazuje:
+- hlavni vetu nahoře,
+- kratke vysvetleni,
+- upozorneni,
+- doporucene kroky.
+
+Logika stavu vychazi z confidence top vysledku:
+- >= 80: vysoka pravdepodobnost,
+- 50-79: stredni pravdepodobnost,
+- < 50: nizka pravdepodobnost,
+- bez dat: ceka na analyzu.
+
+
+5) TOKY PRO TEXTOVE HLEDANI
+---------------------------
+Vstupy:
+- name, nick, city, phone
+
+Proces:
+1. getPrioritizedQueryInfo() urci prioritu dotazu.
+2. getQuery() vrati prioritni dotaz bez striktniho AND.
+3. getSelectedSources() vrati aktivni zdroje.
+4. getActiveLinks() vygeneruje odkazy podle zdroju.
+5. renderResults(lastResults) vykresli vystup.
+6. writeAuditEntry('search_all', ...) ulozi audit.
+
+Pravidla:
+- pri prilis obecnem dotazu mohou byt nektere registry preskoceny,
+- uzivatel dostane upozorneni, co bylo preskoceno.
+
+
+6) TOKY PRO FOTO HLEDANI
+------------------------
+6.1 Foto z URL
+Vstup:
+- #photo-url
+
+Proces:
+1. validace URL,
+2. generovani odkazu Google Lens/Yandex/TinEye,
+3. reset foto analyzy a panelu,
+4. renderResults(),
+5. audit search_photo_url.
+
+6.2 Foto OSINT ze souboru
+Vstup:
+- #photo-file (jpeg/png/webp),
+- #photo-endpoint.
+
+Dulezite UX pravidlo:
+- tlacitko #photo-api-search-btn je disabled, dokud neni soubor.
+
+Proces:
+1. validace endpointu a souboru,
+2. nahrani souboru pres FormData,
+3. timeout 30 sekund a chybova obsluha,
+4. normalizePhotoApiResults(),
+5. normalizePhotoCandidates(),
+6. buildPhotoSourceLinks(),
+7. merge do lastResults,
+8. renderPhotoAnalysis(), renderPhotoDashboard(), renderResults(),
+9. writeAuditEntry('search_photo_api', ...).
+
+SAFE_MODE:
+- pokud je aktivni, backend muze vracet omezujici warning ve vysledku.
+
+Fallback:
+- kdyz API nevrati pouzitelne vysledky, vykresli se prazdny stav.
+
+
+7) SKRYVANI CITLIVYCH DETAILU
+-----------------------------
+Default:
+- hash, raw a request logy nejsou videt.
+
+Foto analyza:
+- defaultne je videt jen souhrn,
+- po kliknuti se ukazuje hash, exif a geolinky.
+
+Historie:
+- historie je oddeleny referencni panel,
+- nepouziva se jako aktivni vstup do aktualni analyzy.
+
+
+8) VYKRESLENI VYSLEDKU
+----------------------
+Hlavni logika renderResults():
+1. priprava dat pres getPreparedResults(),
+2. prazdny stav ma lidskou odpoved v Simple,
+3. neprazdny stav vytvori answerBox a top verdict,
+4. kazdy vysledek je operativni karta se subjektem, nalezenim, riziky a zaverem,
+5. Simple drzi minimalni vystup,
+6. Forensic zobrazuje vsechny vysledky a detailni vrstvy.
+
+
+9) SKORE A PRIORITIZACE
+-----------------------
+Validita je orientacni a kombinuje duveryhodnost zdroje a uplnost dotazu.
+
+Prepared results:
+- deduplikace URL,
+- razeni podle validity nebo zdroje.
+
+
+10) TECHNICKE DETAILY VYSLEDKU
+------------------------------
+Detailni indikatory zahrnují:
+- shodu,
+- manipulaci,
+- OCR,
+- vice zdroju.
+
+V Simple jsou skryte defaultne.
+Ve Forensic je lze rozbalit hromadne.
+
+
+11) ENTITNI MODEL A VAZBY
+-------------------------
+Funkce:
+- pridani, uprava a smazani entity,
+- pridani a smazani vazby,
+- automaticke navrhy vazeb,
+- render seznamu a detailu,
+- vizualizace grafu.
+
+Datova pole entity:
+- id, caseId, type, name, description, metadata, createdAt, updatedAt.
+
+Datova pole vazby:
+- id, caseId, sourceEntityId, targetEntityId, relationshipType, confidence, note.
+
+
+12) REZIM PRIPADU A AUDIT
+-------------------------
+Profil pripadu:
+- case-id, case-title, case-operator.
+
+Poznamka ke kompatibilite:
+- case-reason muze existovat v importovanych starsich datech,
+- v aktualnim UI se uz samostatne nezadava.
+
+Moduly pripadu:
+- Casova osa: udalosti pripadu,
+- Dukazy: lokalni prilohy,
+- Ukoly: checklist ukolu,
+- Asistent: pravidlove doporuceni dalsich kroku.
+
+Audit zapisuje:
+- hledani textem a fotkou,
+- zmeny entit a vazeb,
+- metadata o poctu vysledku a zdroju.
+
+
+13) EXPORTY A VYSTUPY
+---------------------
+Vystupni exporty:
+- CSV, TXT,
+- PDF zprava,
+- JSON zprava,
+- audit TXT,
+- spis JSON,
+- globalni JSON export/import.
+
+PDF zprava obsahuje:
+- dotaz, cas a metadata pripadu,
+- seznam odkazu,
+- entity a vazby,
+- udalosti casove osy,
+- checklist ukolu,
+- evidence priloh,
+- doporuceni asistenta.
+
+
+14) BACKEND API
+---------------
+Hlavni endpointy:
+- POST /api/reverse-image
+- POST /api/report-generate
+- POST /api/username-search
+- POST /api/email-osint
+- POST /api/domain-intel
+- POST /api/metadata-extract
+
+Vlastnosti:
+- validace MIME typu a velikosti souboru,
+- timeouty a retry,
+- rate-limit ochrana,
+- hash + EXIF/GPS extraction,
+- normalizace a scoring vysledku.
+
+OCR runtime pravidla:
+- OCR je opt-in,
+- aktivuje se pouze pri OSINT_ENABLE_OCR=1,
+- v test runtime je OCR blokovano guardem.
+
+ENV volby:
+- NEWS_API_KEY,
+- OSINT_ENABLE_OCR,
+- OSINT_ENABLE_AI_ANALYSIS,
+- OSINT_AI_ANALYSIS_API_URL,
+- OSINT_AI_ANALYSIS_API_KEY,
+- OSINT_AI_ANALYSIS_TIMEOUT_MS.
+
+
+15) CHYBOVE STAVY A UX REAKCE
+-----------------------------
+Frontend:
+- showAlert() pro lidske hlasky,
+- timeout a chyby fetch maji specialni text,
+- pri prazdnem vstupu nebo chybejicim souboru se akce zastavi.
+
+Backend:
+- 400: neplatny vstup,
+- 429: rate limit,
+- 502: externi provider timeout nebo chyba.
+
+
+16) TESTY A OVERENI
+------------------
+Pokryti zahrnuje:
+- validace server API,
+- timeouty a response struktury,
+- manipulace a fingerprint pipeline,
+- mapovani advanced -> forensic,
+- mapovani verdict levelu,
+- logic analysis jednotkove testy,
+- prenos logicAnalysis a aiAnalysis v reverse-image toku.
+
+Doporucene doplnkove testy:
+- prazdny stav renderResults v Simple,
+- disabled analyza bez souboru,
+- forensic global detail toggle,
+- timeline CRUD,
+- evidence import/export kompatibilita,
+- task complete toggle a dopad do asistenta.
+
+
+17) STRUCNY MENTALNI MODEL PRO AI
+---------------------------------
+Pokud tuto aplikaci analyzuje jina AI, ber ji jako:
+- stateful browser app s heavy localStorage use,
+- jednu hlavni orchestracni vrstvu v app.js,
+- kombinaci frontend logiky, backend API a pravidloveho vyhodnoceni.
+  - generatoru OSINT odkazu,
+  - foto reverse-image workflow,
+  - pripadove evidence,
+  - audit/reporting vrstvy.
+
+Nejdulezitejsi entrypointy logiky:
+- renderResults()
+- searchAll()
+- searchByPhotoUrl()
+- searchByPhotoApi()
+- renderPhotoAnalysis()
+- updateResultsModeUi()
+- collectUiState()/loadUiState()
+
+
+18) ZAVER
+---------
+Soucasna verze je navrzena jako dvouvrstvy UX:
+- Simple: odpoved rychle a prehledne
+- Forensic: data hluboce a pod kontrolou
+
+Detaily jsou schovany defaultne, ale plne dostupne na vyzadani.
+Aplikace je orientovana na operativni praci + auditovatelnost.

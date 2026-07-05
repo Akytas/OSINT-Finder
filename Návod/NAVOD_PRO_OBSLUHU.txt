@@ -1,0 +1,144 @@
+OSINT FINDER - NAVOD PRO OBSLUHU (AKTUALNI STAV)
+=================================================
+
+1) CO APLIKACE DELA
+-------------------
+OSINT Finder je lokalni webovy nastroj pro praci s verejne dostupnymi informacemi.
+Vraci kandidaty k overeni, ne definitivni identitu. Konecny zaver dela vzdy clovek.
+
+Hlavni schopnosti:
+- textove hledani (jmeno, nick, mesto, telefon),
+- prioritni logika dotazu bez striktniho AND,
+- hledani podle fotografie (URL nebo nahrany soubor),
+- rozsirene foto zdroje,
+- rezim pripadu + auditni stopa,
+- casova osa, dukazy a ukoly v pripadu,
+- pravidlovy vysetrovaci asistent,
+- entity, vazby a graf vztahu,
+- exporty CSV, TXT, PDF a JSON,
+- vystup v rezimu Jednoduchy (Simple) a Forenzni (Forensic).
+
+2) REZIMY UZIVATELE
+-------------------
+Jednoduchy (Simple):
+- defaultni rezim,
+- minimalni vystup,
+- jeden top vysledek + jasna odpoved,
+- technicke detaily jsou skryte.
+
+Forenzni (Forensic):
+- plny seznam vysledku,
+- rozbalitelne technicke detaily,
+- vhodne pro hloubkovou analyzu.
+
+3) HORNI VERDIKT
+----------------
+Nahore v aplikaci se zobrazuje dynamicky verdict:
+- vysoka pravdepodobnost,
+- stredni pravdepodobnost,
+- nizka pravdepodobnost,
+- ceka na analyzu.
+
+Aktualne verdict zobrazuje:
+- hlavni vetu nahoře,
+- kratke vysvetleni,
+- upozorneni,
+- doporucene kroky.
+
+4) ZAKLADNI PRACOVNI POSTUP
+---------------------------
+1. Nastav pripad: ID pripadu, nazev, operator.
+2. Spust hledani textem nebo fotkou.
+3. Cti horni verdict a odpoved.
+4. Relevantni nalezy pridej do pripadu.
+5. V detailu pripadu dopln casovou osu, dukazy a ukoly.
+6. V pripade potreby exportuj audit nebo spis.
+
+Dotaz se sklada prioritne:
+- 1) cele jmeno,
+- 2) jmeno,
+- 3) telefon.
+Nepouziva se striktni AND pres vsechna pole.
+
+5) FOTO POSTUP
+----------------
+Foto z URL:
+- vloz URL,
+- klikni Foto hledani z URL,
+- aplikace vrati reverse-image odkazy.
+
+Foto OSINT analyza ze souboru:
+- nahraj JPEG, PNG nebo WEBP,
+- tlacitko Foto OSINT hledani je aktivni az po nahrani souboru,
+- klikni Foto OSINT hledani,
+- aplikace zavola backend endpoint,
+- zobrazi vysledky + verdict.
+
+Chovani pri omezenich:
+- pokud je SAFE_MODE aktivni, backend muze vratit omezeni,
+- nahrani fotky na backend ma timeout 30 sekund.
+
+Poznamka:
+- hash, raw a request logy jsou defaultne skryte,
+- zobrazi se az po explicitnim kliknuti na technicke detaily.
+
+6) JAK CTI VYSLEDKY
+-------------------
+Kazda karta vysledku ma format:
+- subjekt,
+- nalezeno,
+- rizika,
+- zaver.
+
+Rychle signaly:
+- shoda,
+- manipulace,
+- OCR,
+- vice zdroju.
+
+Urovne duvery:
+- HIGH: 80-100 %,
+- MEDIUM: 50-79 %,
+- LOW: 0-49 %.
+
+Vzdy plati:
+- jeden odkaz nestaci,
+- potvrzuj minimalne ve dvou nezavislych zdrojich.
+
+7) ENTITNI CAST A PRIPAD
+------------------------
+Umoznuje:
+- vytvaret entity,
+- vytvaret vazby mezi entitami,
+- zobrazit graf vztahu,
+- evidovat zmeny v auditu.
+
+Doporuceni:
+- po relevantnim nalezu klikni Pridat do pripadu.
+
+8) EXPORTY
+----------
+- CSV/TXT: seznam odkazu,
+- PDF zprava: prehled vysledku + pripadovy kontext,
+- JSON zprava: strukturovany forenzni vystup,
+- audit TXT: casova stopa kroku,
+- spis JSON: konkretni pripad,
+- globalni JSON export/import: cely lokalni dataset.
+
+9) OMEZENI A UPOZORNENI
+-----------------------
+- tretistranne sluzby meni chovani,
+- reverse image nekdy nevrati vysledky,
+- nahrani fotky muze skoncit timeoutem po 30 sekundach,
+- historie slouzi jen pro orientaci,
+- aplikace je pomocny nastroj, ne finalni dukaz.
+
+10) RYCHLY CHECKLIST PRED UZAVRENIM
+------------------------------------
+- Je vyplneno ID pripadu, nazev pripadu a operator?
+- Je oddelen kandidat vs. potvrzeno?
+- Jsou zavery potvrzene vice zdroji?
+- Je exportovan audit?
+- Je exportovan spis?
+
+KONEC DOKUMENTU

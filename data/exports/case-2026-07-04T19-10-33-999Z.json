@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 2,
+  "bundleType": "case-bundle",
+  "exportedAt": "2026-07-04T19:10:33.999Z",
+  "case": {
+    "id": "CASE-20260704-DUP3",
+    "title": "Test pripad",
+    "operator": "Copilot test",
+    "reason": "Overeni funkcnosti v live prostredi",
+    "createdAt": "2026-07-04T19:08:32.018Z",
+    "updatedAt": "2026-07-04T19:10:28.518Z"
+  },
+  "auditCount": 4,
+  "entries": [
+    {
+      "id": "1783192172475-mkwptw",
+      "at": "2026-07-04T19:09:32.475Z",
+      "action": "search_all",
+      "caseId": "CASE-20260704-DUP3",
+      "caseReason": "",
+      "operator": "",
+      "query": "Jan Novak",
+      "selectedSources": [
+        "src_google",
+        "src_reddit",
+        "src_x",
+        "src_web",
+        "src_images",
+        "src_linkedin",
+        "src_facebook",
+        "src_instagram",
+        "src_github",
+        "src_youtube",
+        "src_tiktok",
+        "src_seznam",
+        "src_bing",
+        "src_duckduckgo",
+        "src_telegram",
+        "src_quora",
+        "src_stackoverflow",
+        "src_gitlab",
+        "src_startpage",
+        "src_qwant",
+        "src_vk",
+        "src_yandex",
+        "src_yahoo",
+        "src_vimeo",
+        "src_interpol",
+        "src_europol",
+        "src_fbi_wanted",
+        "src_eu_most_wanted",
+        "src_dea",
+        "src_usmarshals",
+        "src_nca_uk",
+        "src_ofac",
+        "src_eu_sanctions",
+        "src_un_sanctions"
+      ],
+      "inputs": {
+        "name": "",
+        "nick": "",
+        "city": "",
+        "phone": "",
+        "photoUrl": ""
+      },
+      "resultCount": 24,
+      "skippedOfficialSources": [
+        "Interpol",
+        "Europol",
+        "FBI Wanted",
+        "EU Most Wanted",
+        "DEA",
+        "US Marshals",
+        "NCA UK",
+        "OFAC Sanctions",
+        "EU Sanctions",
+        "UN Sanctions"
+      ],
+      "resultSnapshot": [
+        {
+          "label": "LinkedIn",
+          "url": "https://www.google.com/search?q=site:linkedin.com+Jan%20Novak",
+          "validityPercent": 64,
+          "sourcePercent": 76,
+          "queryPercent": 35
+        },
+        {
+          "label": "GitHub",
+          "url": "https://www.google.com/search?q=site:github.com+Jan%20Novak",
+          "validityPercent": 63,
+          "sourcePercent": 74,
+          "queryPercent": 35
+        },
+        {
+          "label": "GitLab",
+          "url": "https://www.google.com/search?q=site:gitlab.com+Jan%20Novak",
+          "validityPercent": 63,
+          "sourcePercent": 74,
+          "queryPercent": 35
+        },
+        {
+          "label": "Stack Overflow",
+          "url": "https://www.google.com/search?q=site:stackoverflow.com+Jan%20Novak",
+          "validityPercent": 62,
+          "sourcePercent": 73,
+          "queryPercent": 35
+        },
+        {
+          "label": "Bing",
+          "url": "https://www.bing.com/search?q=Jan%20Novak",
+          "validityPercent": 58,
+          "sourcePercent": 67,
+          "queryPercent": 35
+        },
+        {
+          "label": "Google",
+          "url": "https://www.google.com/search?q=Jan%20Novak",
+          "validityPercent": 58,
+          "sourcePercent": 67,
+          "queryPercent": 35
+        },
+        {
+          "label": "DuckDuckGo",
+          "url": "https://duckduckgo.com/?q=Jan%20Novak",
+          "validityPercent": 57,
+          "sourcePercent": 65,
+          "queryPercent": 35
+        },
+        {
+          "label": "Seznam",
+          "url": "https://search.seznam.cz/?q=Jan%20Novak",
+          "validityPercent": 57,
+          "sourcePercent": 65,
+          "queryPercent": 35
+        },
+        {
+          "label": "Startpage",
+          "url": "https://www.startpage.com/sp/search?query=Jan%20Novak",
+          "validityPercent": 57,
+          "sourcePercent": 65,
+          "queryPercent": 35
+        },
+        {
+          "label": "Qwant",
+          "url": "https://www.qwant.com/?q=Jan%20Novak",
+          "validityPercent": 56,
+          "sourcePercent": 65,
+          "queryPercent": 35
+        },
+        {
+          "label": "Yandex",
+          "url": "https://yandex.com/search/?text=Jan%20Novak",
+          "validityPercent": 56,
+          "sourcePercent": 64,
+          "queryPercent": 35
+        },
+        {
+          "label": "Yahoo",
+          "url": "https://search.yahoo.com/search?p=Jan%20Novak",
+          "validityPercent": 55,
+          "sourcePercent": 63,
+          "queryPercent": 35
+        },
+        {
+          "label": "Quora",
+          "url": "https://www.google.com/search?q=site:quora.com+Jan%20Novak",
+          "validityPercent": 54,
+          "sourcePercent": 62,
+          "queryPercent": 35
+        },
+        {
+          "label": "X / Twitter",
+          "url": "https://www.google.com/search?q=site:twitter.com+Jan%20Novak",
+          "validityPercent": 54,
+          "sourcePercent": 61,
+          "queryPercent": 35
+        },
+        {
+          "label": "Facebook",
+          "url": "https://www.google.com/search?q=site:facebook.com+Jan%20Novak",
+          "validityPercent": 53,
+          "sourcePercent": 61,
+          "queryPercent": 35
+        },
+        {
+          "label": "Instagram",
+          "url": "https://www.google.com/search?q=site:instagram.com+Jan%20Novak",
+          "validityPercent": 53,
+          "sourcePercent": 60,
+          "queryPercent": 35
+        },
+        {
+          "label": "Vimeo",
+          "url": "https://www.google.com/search?q=site:vimeo.com+Jan%20Novak",
+          "validityPercent": 53,
+          "sourcePercent": 60,
+          "queryPercent": 35
+        },
+        {
+          "label": "YouTube",
+          "url": "https://www.google.com/search?q=site:youtube.com+Jan%20Novak",
+          "validityPercent": 53,
+          "sourcePercent": 61,
+          "queryPercent": 35
+        },
+        {
+          "label": "Reddit",
+          "url": "https://www.google.com/search?q=site:reddit.com+Jan%20Novak",
+          "validityPercent": 52,
+          "sourcePercent": 59,
+          "queryPercent": 35
+        },
+        {
+          "label": "Telegram",
+          "url": "https://www.google.com/search?q=site:t.me+Jan%20Novak",
+          "validityPercent": 52,
+          "sourcePercent": 58,
+          "queryPercent": 35
+        },
+        {
+          "label": "Web",
+          "url": "https://www.google.com/search?q=Jan%20Novak+diskuze+forum",
+          "validityPercent": 52,
+          "sourcePercent": 58,
+          "queryPercent": 35
+        },
+        {
+          "label": "TikTok",
+          "url": "https://www.google.com/search?q=site:tiktok.com+Jan%20Novak",
+          "validityPercent": 51,
+          "sourcePercent": 57,
+          "queryPercent": 35
+        },
+        {
+          "label": "VK",
+          "url": "https://www.google.com/search?q=site:vk.com+Jan%20Novak",
+          "validityPercent": 51,
+          "sourcePercent": 57,
+          "queryPercent": 35
+        },
+        {
+          "label": "Obrazky",
+          "url": "https://www.google.com/search?tbm=isch&q=Jan%20Novak",
+          "validityPercent": 49,
+          "sourcePercent": 55,
+          "queryPercent": 35
+        }
+      ]
+    },
+    {
+      "id": "1783192193048-3rohk7",
+      "at": "2026-07-04T19:09:53.048Z",
+      "action": "entity_create",
+      "caseId": "CASE-20260704-DUP3",
+      "caseReason": "Overeni funkcnosti v live prostredi",
+      "operator": "Copilot test",
+      "query": "Jan Novak",
+      "selectedSources": [
+        "src_google",
+        "src_reddit",
+        "src_x",
+        "src_web",
+        "src_images",
+        "src_instagram",
+        "src_youtube",
+        "src_tiktok",
+        "src_bing",
+        "src_yandex",
+        "src_vimeo"
+      ],
+      "inputs": {
+        "name": "",
+        "nick": "",
+        "city": "",
+        "phone": "",
+        "photoUrl": ""
+      },
+      "entityId": "domain_1783192193047_lccw",
+      "entityType": "domain",
+      "entityName": "www.google.com"
+    },
+    {
+      "id": "1783192228450-zlbmpc",
+      "at": "2026-07-04T19:10:28.450Z",
+      "action": "timeline_create",
+      "caseId": "CASE-20260704-DUP3",
+      "caseReason": "Overeni funkcnosti v live prostredi",
+      "operator": "Copilot test",
+      "query": "Jan Novak",
+      "selectedSources": [
+        "src_google",
+        "src_reddit",
+        "src_x",
+        "src_web",
+        "src_images",
+        "src_instagram",
+        "src_youtube",
+        "src_tiktok",
+        "src_bing",
+        "src_yandex",
+        "src_vimeo"
+      ],
+      "inputs": {
+        "name": "",
+        "nick": "",
+        "city": "",
+        "phone": "",
+        "photoUrl": ""
+      },
+      "timelineId": "timeline_1783192228449_lv6px",
+      "title": "Kontrolni bod 1"
+    },
+    {
+      "id": "1783192228519-dlba6c",
+      "at": "2026-07-04T19:10:28.519Z",
+      "action": "task_create",
+      "caseId": "CASE-20260704-DUP3",
+      "caseReason": "Overeni funkcnosti v live prostredi",
+      "operator": "Copilot test",
+      "query": "Jan Novak",
+      "selectedSources": [
+        "src_google",
+        "src_reddit",
+        "src_x",
+        "src_web",
+        "src_images",
+        "src_instagram",
+        "src_youtube",
+        "src_tiktok",
+        "src_bing",
+        "src_yandex",
+        "src_vimeo"
+      ],
+      "inputs": {
+        "name": "",
+        "nick": "",
+        "city": "",
+        "phone": "",
+        "photoUrl": ""
+      },
+      "taskId": "task_1783192228518_yw81q",
+      "title": "Projit exporty"
+    }
+  ],
+  "latestPreparedResults": [
+    {
+      "source": "LinkedIn",
+      "url": "https://www.google.com/search?q=site:linkedin.com+Jan%20Novak",
+      "validityPercent": 64
+    },
+    {
+      "source": "GitHub",
+      "url": "https://www.google.com/search?q=site:github.com+Jan%20Novak",
+      "validityPercent": 63
+    },
+    {
+      "source": "GitLab",
+      "url": "https://www.google.com/search?q=site:gitlab.com+Jan%20Novak",
+      "validityPercent": 63
+    },
+    {
+      "source": "Stack Overflow",
+      "url": "https://www.google.com/search?q=site:stackoverflow.com+Jan%20Novak",
+      "validityPercent": 62
+    },
+    {
+      "source": "Bing",
+      "url": "https://www.bing.com/search?q=Jan%20Novak",
+      "validityPercent": 58
+    },
+    {
+      "source": "Google",
+      "url": "https://www.google.com/search?q=Jan%20Novak",
+      "validityPercent": 58
+    },
+    {
+      "source": "DuckDuckGo",
+      "url": "https://duckduckgo.com/?q=Jan%20Novak",
+      "validityPercent": 57
+    },
+    {
+      "source": "Seznam",
+      "url": "https://search.seznam.cz/?q=Jan%20Novak",
+      "validityPercent": 57
+    },
+    {
+      "source": "Startpage",
+      "url": "https://www.startpage.com/sp/search?query=Jan%20Novak",
+      "validityPercent": 57
+    },
+    {
+      "source": "Qwant",
+      "url": "https://www.qwant.com/?q=Jan%20Novak",
+      "validityPercent": 56
+    },
+    {
+      "source": "Yandex",
+      "url": "https://yandex.com/search/?text=Jan%20Novak",
+      "validityPercent": 56
+    },
+    {
+      "source": "Yahoo",
+      "url": "https://search.yahoo.com/search?p=Jan%20Novak",
+      "validityPercent": 55
+    },
+    {
+      "source": "Quora",
+      "url": "https://www.google.com/search?q=site:quora.com+Jan%20Novak",
+      "validityPercent": 54
+    },
+    {
+      "source": "X / Twitter",
+      "url": "https://www.google.com/search?q=site:twitter.com+Jan%20Novak",
+      "validityPercent": 54
+    },
+    {
+      "source": "Facebook",
+      "url": "https://www.google.com/search?q=site:facebook.com+Jan%20Novak",
+      "validityPercent": 53
+    },
+    {
+      "source": "Instagram",
+      "url": "https://www.google.com/search?q=site:instagram.com+Jan%20Novak",
+      "validityPercent": 53
+    },
+    {
+      "source": "Vimeo",
+      "url": "https://www.google.com/search?q=site:vimeo.com+Jan%20Novak",
+      "validityPercent": 53
+    },
+    {
+      "source": "YouTube",
+      "url": "https://www.google.com/search?q=site:youtube.com+Jan%20Novak",
+      "validityPercent": 53
+    },
+    {
+      "source": "Reddit",
+      "url": "https://www.google.com/search?q=site:reddit.com+Jan%20Novak",
+      "validityPercent": 52
+    },
+    {
+      "source": "Telegram",
+      "url": "https://www.google.com/search?q=site:t.me+Jan%20Novak",
+      "validityPercent": 52
+    },
+    {
+      "source": "Web",
+      "url": "https://www.google.com/search?q=Jan%20Novak+diskuze+forum",
+      "validityPercent": 52
+    },
+    {
+      "source": "TikTok",
+      "url": "https://www.google.com/search?q=site:tiktok.com+Jan%20Novak",
+      "validityPercent": 51
+    },
+    {
+      "source": "VK",
+      "url": "https://www.google.com/search?q=site:vk.com+Jan%20Novak",
+      "validityPercent": 51
+    },
+    {
+      "source": "Obrazky",
+      "url": "https://www.google.com/search?tbm=isch&q=Jan%20Novak",
+      "validityPercent": 49
+    }
+  ],
+  "latestPhotoAnalysis": null,
+  "entities": [
+    {
+      "id": "domain_1783192193047_lccw",
+      "caseId": "CASE-20260704-DUP3",
+      "type": "domain",
+      "name": "www.google.com",
+      "description": "Zdroj: LinkedIn",
+      "createdAt": "2026-07-04T19:09:53.047Z",
+      "updatedAt": "2026-07-04T19:09:53.047Z",
+      "metadata": {
+        "url": "https://www.google.com/search?q=site:linkedin.com+Jan%20Novak",
+        "sourceLabel": "LinkedIn"
+      }
+    }
+  ],
+  "relationships": [],
+  "timeline": [
+    {
+      "id": "timeline_1783192228449_lv6px",
+      "caseId": "CASE-20260704-DUP3",
+      "title": "Kontrolni bod 1",
+      "description": "Test casove osy v live prostredi",
+      "createdAt": "2026-07-04T19:10:28.449Z"
+    }
+  ],
+  "evidence": [],
+  "tasks": [
+    {
+      "id": "task_1783192228518_yw81q",
+      "caseId": "CASE-20260704-DUP3",
+      "title": "Projit exporty",
+      "completed": false,
+      "createdAt": "2026-07-04T19:10:28.518Z"
+    }
+  ],
+  "entityStats": {
+    "person": 0,
+    "phone": 0,
+    "email": 0,
+    "domain": 1,
+    "web": 0,
+    "social": 0,
+    "image": 0,
+    "vehicle": 0,
+    "organization": 0,
+    "address": 0,
+    "document": 0,
+    "note": 0
+  },
+  "relationshipCount": 0,
+  "graphImage": "data:,"
+}

@@ -1,0 +1,130 @@
+OSINT FINDER - RYCHLY START (A4 TAHAK, AKTUALNI STAV)
+=====================================================
+
+UCEL
+----
+Rychly navod pro beznou praci.
+Pamatuj: aplikace vraci odpoved + kandidaty k overeni, ne definitivni dukaz.
+
+
+A) 30-SEKUNDOVY START
+---------------------
+1) Nastav pripad a uloz ho.
+2) Zadej vstup nebo nahraj obrazek.
+3) Klikni Hledat vsude nebo Foto OSINT hledani.
+4) Cti horni verdict a odpoved.
+5) Relevantni nalezy pridej do pripadu.
+6) V pripadu dopln Timeline, Evidence a Tasks.
+
+Priorita dotazu:
+- 1) cele jmeno,
+- 2) jmeno,
+- 3) telefon.
+Nepouziva se striktni AND pres vsechna pole.
+
+
+B) REZIMY
+---------
+Jednoduchy (Simple):
+- 1 top vysledek,
+- rychla odpoved,
+- minimum detailu.
+
+Forenzni (Forensic):
+- vsechny vysledky,
+- rozbalitelne technicke detaily,
+- vhodne pro analyzu.
+
+
+C) JAK CTIST VYSLEDEK
+---------------------
+Kazda karta vysledku ma format:
+- subjekt,
+- nalezeno,
+- rizika,
+- zaver.
+
+Hlavni verdict nahore:
+- vysoka pravdepodobnost,
+- stredni pravdepodobnost,
+- nizka pravdepodobnost,
+- ceka na analyzu.
+
+Ikony detailu:
+- shoda,
+- manipulace,
+- OCR,
+- vice zdroju.
+
+
+D) FOTO ANALYZA
+---------------
+1) Nahraj JPEG, PNG nebo WEBP.
+2) Tlacitko Foto OSINT hledani je aktivni az po nahrani souboru.
+3) Klikni Foto OSINT hledani.
+4) Vysledky overuj rucne v otevrenych odkazech.
+
+Foto zdroje:
+- Google, Bing, Yandex, Reddit, X, Imgur, News API.
+
+Rychle filtry vysledku:
+- Min confidence,
+- Jen manipulovane,
+- Jen duveryhodne domeny.
+
+Detail panel navic:
+- First seen / Last seen,
+- Fake score,
+- Logic analysis,
+- AI analysis pouze pokud je zapnuta.
+
+
+E) MINIMUM STANDARD PRED UZAVRENIM
+----------------------------------
+[ ] ID pripadu, nazev pripadu a operator jsou vyplnene.
+[ ] Kandidat a potvrzeno jsou oddelene.
+[ ] Klicovy zaver je overen aspon ve 2 nezavislych zdrojich.
+[ ] Timeline obsahuje klicove udalosti.
+[ ] Checklist ukolu ma uzavrene hlavni body.
+[ ] Evidence obsahuje dulezite prilohy.
+[ ] Audit TXT (pripad) je exportovan.
+[ ] Spis JSON (export) je exportovan.
+[ ] Import spisu JSON byl otestovan bez slucovani.
+
+
+F) EXPORTY
+----------
+- CSV/TXT: rychly seznam odkazu.
+- PDF/TXT zaverena zprava: sdileni nebo tisk + casova osa + ukoly + dukazy + doporuceni asistenta.
+- JSON zprava: strukturovany forenzni vystup.
+- Audit TXT (pripad): casova stopa cinnosti.
+- Spis JSON (export): kompletni pripad.
+- Import spisu JSON: nacteni jednoho pripadu bez slucovani.
+- Globalni JSON export/import: zaloha celeho lokalniho datasetu.
+
+
+G) KDYZ NECO NEFUNGUJE
+----------------------
+1) Nic se nedeje:
+   - zkontroluj vstupy,
+   - zkontroluj, ze je u foto analyzy nahrany soubor.
+
+2) Foto analyza pada:
+   - over endpoint backendu,
+   - zkus jinou fotku,
+   - zkontroluj format a velikost,
+   - pocitej s timeoutem 30 sekund u nahrani souboru.
+
+3) Malo vysledku:
+   - rozsir dotaz,
+   - zapni vic zdroju,
+   - zkus varianty jmena.
+
+
+H) BEZPECNOSTNI PRIPOMINKA
+--------------------------
+Pracuj pouze v pravnim a internim ramce.
+Aplikace podporuje setreni, nenahrazuje odborny usudek.
+
+
+KONEC - RYCHLY TISKOVY TAHAK

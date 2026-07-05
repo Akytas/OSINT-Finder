@@ -12,7 +12,8 @@ const STORAGE_KEYS = {
   timeline: 'osint_timeline',
   evidence: 'osint_evidence',
   tasks: 'osint_tasks',
-  entityValidations: 'osint_entity_validations'
+  entityValidations: 'osint_entity_validations',
+  bugReports: 'osint_bug_reports'
 };
 let exportDirectoryHandle = null;
 let photoPreviewObjectUrl = null;
@@ -28,6 +29,7 @@ let photoSensitiveDetailsOpen = false;
 let forensicDetailsOpen = false;
 let loadingRunId = 0;
 let SAFE_MODE = false;
+const PHOTO_API_TIMEOUT_MS = 30000;
 let METHODOLOGY_LOG = [];
 let ENTITY_VALIDATION_QUEUE = [];
 syncEntityValidationQueue();
@@ -342,7 +344,7 @@ function generateVerdict(results = []) {
   };
 }
 
-const TAB_IDS = ['search', 'results', 'case', 'history'];
+const TAB_IDS = ['search', 'results', 'case', 'history', 'issues'];
 
 function isSimpleUiEnabled() {
   return false;
@@ -702,6 +704,151 @@ const SOURCE_CONFIDENCE = {
   src_vimeo: 0.6
 };
 
+const SOURCE_TYPE_LABELS = {
+  official: 'oficialni registr',
+  mainstream_search: 'mainstream vyhledavac',
+  professional_reference: 'profesni zdroj',
+  social_chatter: 'social chatter',
+  community_content: 'komunitni obsah',
+  media_content: 'media obsah'
+};
+
+const SOURCE_EVIDENCE_ROLE_LABELS = {
+  verification: 'overovaci zdroj',
+  indicator: 'indikacni zdroj'
+};
+
+const SOURCE_TYPE_BASE_CONFIDENCE = {
+  official: 0.92,
+  professional_reference: 0.75,
+  mainstream_search: 0.68,
+  community_content: 0.62,
+  media_content: 0.6,
+  social_chatter: 0.58
+};
+
+const SOURCE_MODE_PRESETS = {
+  person: {
+    name: 'Osoba',
+    sourceIds: [
+      'src_google',
+      'src_seznam',
+      'src_bing',
+      'src_duckduckgo',
+      'src_linkedin',
+      'src_x',
+      'src_facebook',
+      'src_instagram',
+      'src_tiktok',
+      'src_telegram',
+      'src_reddit',
+      'src_web',
+      'src_interpol',
+      'src_europol',
+      'src_fbi_wanted',
+      'src_ofac',
+      'src_eu_sanctions',
+      'src_un_sanctions'
+    ]
+  },
+  company: {
+    name: 'Firma',
+    sourceIds: [
+      'src_google',
+      'src_seznam',
+      'src_bing',
+      'src_duckduckgo',
+      'src_startpage',
+      'src_qwant',
+      'src_web',
+      'src_linkedin',
+      'src_github',
+      'src_gitlab',
+      'src_stackoverflow',
+      'src_reddit',
+      'src_youtube',
+      'src_ofac',
+      'src_eu_sanctions',
+      'src_un_sanctions'
+    ]
+  },
+  domain: {
+    name: 'Domena',
+    sourceIds: [
+      'src_google',
+      'src_seznam',
+      'src_bing',
+      'src_duckduckgo',
+      'src_startpage',
+      'src_qwant',
+      'src_yandex',
+      'src_yahoo',
+      'src_web',
+      'src_github',
+      'src_gitlab',
+      'src_stackoverflow',
+      'src_reddit',
+      'src_quora',
+      'src_ofac',
+      'src_eu_sanctions',
+      'src_un_sanctions'
+    ]
+  },
+  photo: {
+    name: 'Foto',
+    sourceIds: [
+      'src_google',
+      'src_bing',
+      'src_yandex',
+      'src_images',
+      'src_web',
+      'src_reddit',
+      'src_x',
+      'src_instagram',
+      'src_tiktok',
+      'src_youtube',
+      'src_vimeo'
+    ]
+  }
+};
+
+const SOURCE_PROFILE_OVERRIDES = {
+  src_interpol: { type: 'official', evidenceRole: 'verification' },
+  src_europol: { type: 'official', evidenceRole: 'verification' },
+  src_fbi_wanted: { type: 'official', evidenceRole: 'verification' },
+  src_eu_most_wanted: { type: 'official', evidenceRole: 'verification' },
+  src_dea: { type: 'official', evidenceRole: 'verification' },
+  src_usmarshals: { type: 'official', evidenceRole: 'verification' },
+  src_nca_uk: { type: 'official', evidenceRole: 'verification' },
+  src_ofac: { type: 'official', evidenceRole: 'verification' },
+  src_eu_sanctions: { type: 'official', evidenceRole: 'verification' },
+  src_un_sanctions: { type: 'official', evidenceRole: 'verification' },
+  src_google: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_seznam: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_bing: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_duckduckgo: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_startpage: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_qwant: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_yandex: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_yahoo: { type: 'mainstream_search', evidenceRole: 'indicator' },
+  src_linkedin: { type: 'professional_reference', evidenceRole: 'indicator' },
+  src_github: { type: 'professional_reference', evidenceRole: 'indicator' },
+  src_gitlab: { type: 'professional_reference', evidenceRole: 'indicator' },
+  src_stackoverflow: { type: 'professional_reference', evidenceRole: 'indicator' },
+  src_x: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_facebook: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_instagram: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_tiktok: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_vk: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_telegram: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_reddit: { type: 'social_chatter', evidenceRole: 'indicator' },
+  src_web: { type: 'community_content', evidenceRole: 'indicator' },
+  src_quora: { type: 'community_content', evidenceRole: 'indicator' },
+  src_images: { type: 'media_content', evidenceRole: 'indicator' },
+  src_youtube: { type: 'media_content', evidenceRole: 'indicator' },
+  src_vimeo: { type: 'media_content', evidenceRole: 'indicator' }
+};
+
 const INTERNET_CORE_SOURCE_IDS = [
   'src_google',
   'src_bing',
@@ -969,6 +1116,213 @@ function readTasks() {
 
 function writeTasks(items) {
   localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(items));
+}
+
+function readBugReports() {
+  const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.bugReports) || '[]');
+  return Array.isArray(items) ? items : [];
+}
+
+function writeBugReports(items) {
+  localStorage.setItem(STORAGE_KEYS.bugReports, JSON.stringify(items));
+}
+
+function getDefaultIssueTimeValue() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function formatBugReportTime(value) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('cs-CZ');
+}
+
+function setIssueStatus(message, isError = false) {
+  const node = document.getElementById('issue-report-status');
+  if (!node) return;
+  node.textContent = message || '';
+  node.style.color = isError ? '#c2410c' : 'var(--muted)';
+}
+
+function formatBugReportLogEntry(report) {
+  return [
+    `[${formatBugReportTime(report.createdAt)}]`,
+    `Co jsem delal: ${report.activity || '-'}`,
+    `Co jsem cekal: ${report.expected || '-'}`,
+    `Co se stalo: ${report.actual || '-'}`,
+    `Poznamka: ${report.note || '-'}`,
+    '---',
+    ''
+  ].join('\n');
+}
+
+function collectBugReportForm() {
+  const createdAt = document.getElementById('issue-report-time')?.value?.trim() || '';
+  const activity = document.getElementById('issue-report-activity')?.value?.trim() || '';
+  const expected = document.getElementById('issue-report-expected')?.value?.trim() || '';
+  const actual = document.getElementById('issue-report-actual')?.value?.trim() || '';
+  const note = document.getElementById('issue-report-note')?.value?.trim() || '';
+
+  return {
+    createdAt: createdAt || getDefaultIssueTimeValue(),
+    activity,
+    expected,
+    actual,
+    note
+  };
+}
+
+function resetBugReportForm() {
+  const time = document.getElementById('issue-report-time');
+  const activity = document.getElementById('issue-report-activity');
+  const expected = document.getElementById('issue-report-expected');
+  const actual = document.getElementById('issue-report-actual');
+  const note = document.getElementById('issue-report-note');
+
+  if (time) time.value = getDefaultIssueTimeValue();
+  if (activity) activity.value = '';
+  if (expected) expected.value = '';
+  if (actual) actual.value = '';
+  if (note) note.value = '';
+}
+
+function renderBugReports() {
+  const list = document.getElementById('issue-report-list');
+  if (!list) return;
+
+  const reports = readBugReports();
+  if (!reports.length) {
+    list.innerHTML =
+      '<div class="history-row"><div class="history-row-meta">Zatim neni zadne hlaseni chyby.</div></div>';
+    return;
+  }
+
+  const rows = [...reports]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map((report, idx) => {
+      return `
+        <div class="history-row">
+          <div class="history-row-head">
+            <strong>#${idx + 1} ${escapeHtml(report.activity || 'Bez popisu')}</strong>
+            <span class="small">${escapeHtml(formatBugReportTime(report.createdAt))}</span>
+          </div>
+          <div class="history-row-meta"><strong>Co jsem cekal:</strong> ${escapeHtml(report.expected || '-')}</div>
+          <div class="history-row-meta"><strong>Co se stalo:</strong> ${escapeHtml(report.actual || '-')}</div>
+          <div class="history-row-meta"><strong>Poznamka:</strong> ${escapeHtml(report.note || '-')}</div>
+        </div>
+      `;
+    })
+    .join('');
+
+  list.innerHTML = rows;
+}
+
+async function addBugReport() {
+  const report = collectBugReportForm();
+  if (!report.activity || !report.actual) {
+    setIssueStatus('Vyplnte alespon pole Co jste delal a Co se stalo.', true);
+    return;
+  }
+
+  const reports = readBugReports();
+  reports.push(report);
+  writeBugReports(reports);
+  const logSaved = await appendTextToPreferredFile(
+    'bug-reports.log',
+    formatBugReportLogEntry(report)
+  );
+  renderBugReports();
+  resetBugReportForm();
+  if (logSaved) {
+    setIssueStatus('Hlaseni bylo ulozeno lokalne a pripsano do bug-reports.log.');
+    return;
+  }
+
+  setIssueStatus('Hlaseni bylo ulozeno do lokalniho uloziste prohlizece.');
+}
+
+function exportBugReportsAsJson() {
+  const reports = readBugReports();
+  if (!reports.length) {
+    setIssueStatus('Neni co exportovat.', true);
+    return;
+  }
+
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    count: reports.length,
+    reports
+  };
+
+  downloadText(
+    JSON.stringify(payload, null, 2),
+    `osint-bug-report-${stamp}.json`,
+    'application/json'
+  );
+  setIssueStatus('JSON export hlaseni byl vytvoren.');
+}
+
+function exportBugReportsAsTxt() {
+  const reports = readBugReports();
+  if (!reports.length) {
+    setIssueStatus('Neni co exportovat.', true);
+    return;
+  }
+
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const content = reports
+    .map((report, idx) => {
+      return [
+        `# ${idx + 1}`,
+        `Cas: ${formatBugReportTime(report.createdAt)}`,
+        `Co jsem delal: ${report.activity || '-'}`,
+        `Co jsem cekal: ${report.expected || '-'}`,
+        `Co se stalo: ${report.actual || '-'}`,
+        `Poznamka: ${report.note || '-'}`,
+        ''
+      ].join('\n');
+    })
+    .join('\n');
+
+  downloadText(content, `osint-bug-report-${stamp}.txt`, 'text/plain');
+  setIssueStatus('TXT export hlaseni byl vytvoren.');
+}
+
+function clearBugReports() {
+  const reports = readBugReports();
+  if (!reports.length) {
+    setIssueStatus('Seznam hlaseni je uz prazdny.');
+    return;
+  }
+
+  if (!window.confirm('Opravdu chcete smazat vsechna hlaseni chyb?')) {
+    return;
+  }
+
+  writeBugReports([]);
+  renderBugReports();
+  setIssueStatus('Vsechna hlaseni chyb byla smazana.');
+}
+
+function wireBugReportActions() {
+  const addBtn = document.getElementById('issue-report-add-btn');
+  const exportJsonBtn = document.getElementById('issue-export-json-btn');
+  const exportTxtBtn = document.getElementById('issue-export-txt-btn');
+  const clearBtn = document.getElementById('issue-clear-btn');
+  const quickBtn = document.getElementById('issue-report-quick-btn');
+
+  if (addBtn) addBtn.addEventListener('click', addBugReport);
+  if (exportJsonBtn) exportJsonBtn.addEventListener('click', exportBugReportsAsJson);
+  if (exportTxtBtn) exportTxtBtn.addEventListener('click', exportBugReportsAsTxt);
+  if (clearBtn) clearBtn.addEventListener('click', clearBugReports);
+  if (quickBtn) quickBtn.addEventListener('click', () => switchTab('issues'));
+
+  resetBugReportForm();
+  renderBugReports();
 }
 
 function makeCaseItemId(prefix) {
@@ -3080,6 +3434,7 @@ function buildFinalReportData() {
 
   const sourceStats = new Map();
   const domainStats = new Map();
+  const usedSourceIds = new Set();
   const riskFlags = new Set();
   let sumValidity = 0;
   let officialSourceCount = 0;
@@ -3088,6 +3443,7 @@ function buildFinalReportData() {
     sumValidity += item.validityPercent;
     const source = getSourceFromPreparedLabel(item.label);
     if (source) {
+      usedSourceIds.add(source.id);
       const count = sourceStats.get(source.label) || 0;
       sourceStats.set(source.label, count + 1);
 
@@ -3116,6 +3472,61 @@ function buildFinalReportData() {
   });
 
   parseManualLines(notes.risks).forEach((line) => riskFlags.add(line));
+
+  getSelectedSources().forEach((source) => {
+    if (source && source.id) usedSourceIds.add(source.id);
+  });
+
+  const qualityMetrics = summarizeSourceQualityMetrics();
+  const sourceQualityRows = Array.from(usedSourceIds)
+    .map((sourceId) => {
+      const source = getSourceById(sourceId);
+      if (!source) return null;
+      const profile = getSourceTrustProfile(source);
+      const metrics = qualityMetrics[sourceId] || {};
+      return {
+        sourceId,
+        sourceLabel: source.label,
+        sourceTypeLabel: profile.typeLabel,
+        evidenceRoleLabel: profile.evidenceRoleLabel,
+        evidenceRole: profile.evidenceRole,
+        trustPercent: Math.round(getSourceConfidenceById(sourceId) * 100),
+        hitRate: Number.isFinite(Number(metrics.hitRate)) ? Number(metrics.hitRate) : null,
+        falsePositiveRate: Number.isFinite(Number(metrics.falsePositiveRate))
+          ? Number(metrics.falsePositiveRate)
+          : null,
+        avgUsability: Number.isFinite(Number(metrics.avgUsability))
+          ? Number(metrics.avgUsability)
+          : null,
+        selectedRuns: Number(metrics.selectedRuns) || 0,
+        hitRuns: Number(metrics.hitRuns) || 0,
+        totalHits: Number(metrics.totalHits) || 0,
+        lowConfidenceHits: Number(metrics.lowConfidenceHits) || 0
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const roleDelta =
+        (a.evidenceRole === 'verification' ? 0 : 1) - (b.evidenceRole === 'verification' ? 0 : 1);
+      if (roleDelta !== 0) return roleDelta;
+      return b.trustPercent - a.trustPercent || a.sourceLabel.localeCompare(b.sourceLabel, 'cs');
+    });
+
+  const numericAvg = (values) => {
+    const nums = values.filter((value) => Number.isFinite(Number(value))).map(Number);
+    if (!nums.length) return null;
+    return Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length);
+  };
+
+  const sourceQualitySummary = {
+    totalSources: sourceQualityRows.length,
+    verificationSources: sourceQualityRows.filter((item) => item.evidenceRole === 'verification')
+      .length,
+    averageTrust: numericAvg(sourceQualityRows.map((item) => item.trustPercent)),
+    averageHitRate: numericAvg(sourceQualityRows.map((item) => item.hitRate)),
+    averageFalsePositiveRate: numericAvg(sourceQualityRows.map((item) => item.falsePositiveRate)),
+    averageUsability: numericAvg(sourceQualityRows.map((item) => item.avgUsability))
+  };
 
   const avgValidity = prepared.length ? Math.round(sumValidity / prepared.length) : 0;
   const queryCompleteness = Math.round(getQueryCompleteness() * 100);
@@ -3170,6 +3581,8 @@ function buildFinalReportData() {
     topDomains: Array.from(domainStats.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12),
+    sourceQualityRows,
+    sourceQualitySummary,
     caseEntries,
     timeline,
     tasks,
@@ -3220,6 +3633,11 @@ function buildFinalReportText(report) {
   const riskFlags = Array.isArray(report.riskFlags) ? report.riskFlags : [];
   const topSources = Array.isArray(report.topSources) ? report.topSources : [];
   const topDomains = Array.isArray(report.topDomains) ? report.topDomains : [];
+  const sourceQualityRows = Array.isArray(report.sourceQualityRows) ? report.sourceQualityRows : [];
+  const sourceQualitySummary =
+    report.sourceQualitySummary && typeof report.sourceQualitySummary === 'object'
+      ? report.sourceQualitySummary
+      : {};
   const summaryPoints = Array.isArray(report.summaryPoints) ? report.summaryPoints : [];
   const recommendations = Array.isArray(report.recommendations) ? report.recommendations : [];
   const manualCases = Array.isArray(report.manualCases) ? report.manualCases : [];
@@ -3245,7 +3663,6 @@ function buildFinalReportText(report) {
   lines.push(`Vyhotoveno: ${generatedAt}`);
   lines.push(`Případ: ${reportId}${caseTitle ? ` (${caseTitle})` : ''}`);
   lines.push(`Operátor: ${report.operator || '-'}`);
-  lines.push(`Důvod šetření: ${report.reason || '-'}`);
   lines.push(`Subjekt: ${subjectLabel}`);
   lines.push(`Dotaz: ${report.query || '-'}`);
   lines.push(`Orientační rizikové skóre: ${report.riskScore}/100 (${report.riskLevel})`);
@@ -3295,6 +3712,30 @@ function buildFinalReportText(report) {
     });
   } else {
     lines.push('- Zatím bez vyhodnocených domén.');
+  }
+
+  lines.push('-');
+  lines.push('- Kvalitativní metriky zdrojů (popis):');
+  lines.push(
+    '- hit-rate = kolikrát zdroj při svém zapnutí přinesl alespoň 1 výsledek (hitRuns / selectedRuns).'
+  );
+  lines.push(
+    '- false-positive = podíl nízko-validních výsledků (<50% validita) z celkových hitů daného zdroje.'
+  );
+  lines.push('- průměrná použitelnost = průměr validity výsledků zdroje v % (vyšší = lepší).');
+
+  lines.push(
+    `- Souhrn: zdrojů ${sourceQualitySummary.totalSources || 0}, ověřovacích ${sourceQualitySummary.verificationSources || 0}, průměrná důvěra ${formatMetricPercent(sourceQualitySummary.averageTrust)}, hit-rate ${formatMetricPercent(sourceQualitySummary.averageHitRate)}, false-positive ${formatMetricPercent(sourceQualitySummary.averageFalsePositiveRate)}, použitelnost ${formatMetricPercent(sourceQualitySummary.averageUsability)}.`
+  );
+
+  if (sourceQualityRows.length) {
+    sourceQualityRows.forEach((item) => {
+      lines.push(
+        `- ${item.sourceLabel} | typ: ${item.sourceTypeLabel} | role: ${item.evidenceRoleLabel} | důvěra: ${item.trustPercent}% | hit-rate: ${formatMetricPercent(item.hitRate)} | false-positive: ${formatMetricPercent(item.falsePositiveRate)} | použitelnost: ${formatMetricPercent(item.avgUsability)} | běhů vybrán: ${item.selectedRuns} | běhů s hitem: ${item.hitRuns} | hitů celkem: ${item.totalHits} | nízko-validních hitů: ${item.lowConfidenceHits}`
+      );
+    });
+  } else {
+    lines.push('- Kvalitativní metriky zatím nejsou k dispozici (chybí historie běhů).');
   }
 
   addTitle('5. Entity a vazby');
@@ -4384,7 +4825,7 @@ async function searchByPhotoApi() {
   let timeoutId = null;
   try {
     const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 10000);
+    timeoutId = setTimeout(() => controller.abort(), PHOTO_API_TIMEOUT_MS);
     const response = await fetch(endpoint, {
       method: 'POST',
       body: formData,
@@ -4481,7 +4922,9 @@ async function searchByPhotoApi() {
     );
   } catch (error) {
     if (error && error.name === 'AbortError') {
-      showAlert('API vyhledani vyprselo po 10 sekundach (timeout).');
+      showAlert(
+        'Foto API upload vyprsel po 30 sekundach. Zkuste mensi soubor nebo zkontrolujte backend.'
+      );
       return;
     }
     const message = String((error && error.message) || '').toLowerCase();
@@ -4866,8 +5309,20 @@ function updateActiveSourceCount() {
   const badge = document.getElementById('active-source-count');
   if (!badge) return;
 
-  const count = getSelectedSources().length;
-  badge.textContent = `Aktivni zdroje: ${count}`;
+  const selected = getSelectedSources();
+  const count = selected.length;
+  const avgTrust = count
+    ? Math.round(
+        (selected.reduce((sum, source) => sum + getSourceConfidenceById(source.id), 0) / count) *
+          100
+      )
+    : null;
+  badge.textContent =
+    avgTrust === null
+      ? `Aktivni zdroje: ${count}`
+      : `Aktivni zdroje: ${count} | Prumerna duvera: ${avgTrust}%`;
+
+  refreshSourceTrustUi();
 }
 
 function readCustomTemplates() {
@@ -5286,7 +5741,7 @@ async function exportPdfReport() {
     doc.text(caseWrapped, 40, y);
     y += caseWrapped.length * 13 + 4;
 
-    const operatorLine = `Operator: ${caseRecord.operator || getCaseOperator() || '-'} | Duvod: ${caseRecord.reason || getCaseReason() || '-'}`;
+    const operatorLine = `Operator: ${caseRecord.operator || getCaseOperator() || '-'}`;
     const operatorWrapped = doc.splitTextToSize(operatorLine, 510);
     doc.text(operatorWrapped, 40, y);
     y += operatorWrapped.length * 13 + 8;
@@ -5475,7 +5930,6 @@ DOPORUČENÍ:
   const fallbackTime = now.toLocaleString('cs-CZ');
   const caseLineHtml = `${escapeHtml(caseId || 'nenastaven')}${caseRecord.title ? ` (${escapeHtml(caseRecord.title)})` : ''}`;
   const operatorHtml = `${escapeHtml(caseRecord.operator || getCaseOperator() || '-')}`;
-  const reasonHtml = `${escapeHtml(caseRecord.reason || getCaseReason() || '-')}`;
   const statsHtml = ENTITY_TYPES.map(
     (type) => `<li><strong>${escapeHtml(type.label)}:</strong> ${entityStats[type.value] || 0}</li>`
   ).join('');
@@ -5576,7 +6030,7 @@ DOPORUČENÍ:
   <h1>OSINT Finder report</h1>
   <p class="meta">Vygenerovano: ${escapeHtml(fallbackTime)}</p>
   <div class="box"><strong>Dotaz:</strong> ${escapeHtml(query)}</div>
-  <div class="box"><strong>Pripad:</strong> ${caseLineHtml}<br/><strong>Operator:</strong> ${operatorHtml}<br/><strong>Duvod:</strong> ${reasonHtml}</div>
+  <div class="box"><strong>Pripad:</strong> ${caseLineHtml}<br/><strong>Operator:</strong> ${operatorHtml}</div>
   <div class="box"><strong>Titulní strana</strong><br/><strong>Datum:</strong> ${escapeHtml(fallbackTime)}<br/><strong>Případ ID:</strong> ${caseLineHtml}<br/><strong>Dotaz:</strong> ${escapeHtml(query)}</div>
   <div class="box"><strong>Statistika entit a vazeb</strong><ul>${statsHtml}${relationshipStatsHtml}</ul></div>
   ${entitiesHtml ? `<div class="box"><strong>Seznam entit (vyber)</strong><ul>${entitiesHtml}</ul></div>` : ''}
@@ -5664,6 +6118,222 @@ function getSkippedOfficialSourceLabels() {
 
 function getSourceByLabel(label) {
   return SOURCE_DEFS.find((source) => source.label === label) || null;
+}
+
+function getSourceById(sourceId) {
+  return SOURCE_DEFS.find((source) => source.id === sourceId) || null;
+}
+
+function getSourceTrustProfile(sourceOrId) {
+  const sourceId =
+    sourceOrId && typeof sourceOrId === 'object'
+      ? sourceOrId.id
+      : normalizeWhitespace(String(sourceOrId || ''));
+
+  const fallback = {
+    type: 'community_content',
+    typeLabel: SOURCE_TYPE_LABELS.community_content,
+    evidenceRole: 'indicator',
+    evidenceRoleLabel: SOURCE_EVIDENCE_ROLE_LABELS.indicator
+  };
+
+  if (!sourceId) return fallback;
+
+  const profile = SOURCE_PROFILE_OVERRIDES[sourceId] || {};
+  const type = SOURCE_TYPE_LABELS[profile.type] ? profile.type : fallback.type;
+  const evidenceRole = SOURCE_EVIDENCE_ROLE_LABELS[profile.evidenceRole]
+    ? profile.evidenceRole
+    : fallback.evidenceRole;
+
+  return {
+    type,
+    typeLabel: SOURCE_TYPE_LABELS[type],
+    evidenceRole,
+    evidenceRoleLabel: SOURCE_EVIDENCE_ROLE_LABELS[evidenceRole]
+  };
+}
+
+function getSourceConfidenceById(sourceId) {
+  const profile = getSourceTrustProfile(sourceId);
+  const typeBase = SOURCE_TYPE_BASE_CONFIDENCE[profile.type] || 0.6;
+  const explicit = Number(SOURCE_CONFIDENCE[sourceId]);
+
+  if (!Number.isFinite(explicit)) {
+    return clamp(typeBase, 0.35, 0.98);
+  }
+
+  const blended = explicit * 0.65 + typeBase * 0.35;
+  return clamp(blended, 0.35, 0.98);
+}
+
+function summarizeSourceQualityMetrics() {
+  const metricsBySource = {};
+
+  SOURCE_DEFS.forEach((source) => {
+    metricsBySource[source.id] = {
+      selectedRuns: 0,
+      hitRuns: 0,
+      totalHits: 0,
+      lowConfidenceHits: 0,
+      validitySum: 0
+    };
+  });
+
+  const entries = readAuditEntries().filter((entry) => entry && entry.action === 'search_all');
+  entries.forEach((entry) => {
+    const selected = Array.isArray(entry.selectedSources) ? entry.selectedSources : [];
+    const snapshot = Array.isArray(entry.resultSnapshot) ? entry.resultSnapshot : [];
+    const hitsPerRun = new Set();
+
+    selected.forEach((sourceId) => {
+      if (metricsBySource[sourceId]) {
+        metricsBySource[sourceId].selectedRuns += 1;
+      }
+    });
+
+    snapshot.forEach((result) => {
+      const source = getSourceFromPreparedLabel(result && result.label);
+      if (!source || !metricsBySource[source.id]) return;
+
+      const bucket = metricsBySource[source.id];
+      const validity = Number(result && result.validityPercent);
+
+      bucket.totalHits += 1;
+      if (Number.isFinite(validity)) {
+        bucket.validitySum += validity;
+        if (validity < 50) {
+          bucket.lowConfidenceHits += 1;
+        }
+      }
+      hitsPerRun.add(source.id);
+    });
+
+    hitsPerRun.forEach((sourceId) => {
+      if (metricsBySource[sourceId]) {
+        metricsBySource[sourceId].hitRuns += 1;
+      }
+    });
+  });
+
+  Object.keys(metricsBySource).forEach((sourceId) => {
+    const bucket = metricsBySource[sourceId];
+    const hitRate = bucket.selectedRuns
+      ? Math.round((bucket.hitRuns / bucket.selectedRuns) * 100)
+      : null;
+    const falsePositiveRate = bucket.totalHits
+      ? Math.round((bucket.lowConfidenceHits / bucket.totalHits) * 100)
+      : null;
+    const avgUsability = bucket.totalHits
+      ? Math.round(bucket.validitySum / bucket.totalHits)
+      : null;
+
+    metricsBySource[sourceId] = {
+      ...bucket,
+      hitRate,
+      falsePositiveRate,
+      avgUsability
+    };
+  });
+
+  return metricsBySource;
+}
+
+function formatMetricPercent(value) {
+  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}%` : 'n/a';
+}
+
+function refreshSourceTrustUi() {
+  const summary = document.getElementById('source-quality-summary');
+  const metricsBySource = summarizeSourceQualityMetrics();
+  const selected = getSelectedSources();
+
+  SOURCE_DEFS.forEach((source) => {
+    const checkbox = document.getElementById(source.id);
+    const label = checkbox ? checkbox.closest('label') : null;
+    if (!label || !checkbox) return;
+
+    const profile = getSourceTrustProfile(source);
+    const sourceMetrics = metricsBySource[source.id] || {};
+
+    let textWrap = label.querySelector('.source-label-text');
+    let title = label.querySelector('.source-label-title');
+    let meta = label.querySelector('.source-label-meta');
+
+    if (!textWrap || !title || !meta) {
+      label.textContent = '';
+      label.appendChild(checkbox);
+
+      textWrap = document.createElement('span');
+      textWrap.className = 'source-label-text';
+
+      title = document.createElement('span');
+      title.className = 'source-label-title';
+
+      meta = document.createElement('span');
+      meta.className = 'source-label-meta';
+
+      textWrap.appendChild(title);
+      textWrap.appendChild(meta);
+      label.appendChild(textWrap);
+    }
+
+    title.textContent = source.label;
+
+    const roleText =
+      profile.evidenceRole === 'verification'
+        ? `<span class="source-role-verification">${profile.evidenceRoleLabel}</span>`
+        : profile.evidenceRoleLabel;
+    const hitText = formatMetricPercent(sourceMetrics.hitRate);
+    const fpText = formatMetricPercent(sourceMetrics.falsePositiveRate);
+    const usabilityText = formatMetricPercent(sourceMetrics.avgUsability);
+    meta.innerHTML = `${profile.typeLabel} • ${roleText} • hit-rate ${hitText} • false-positive ${fpText} • prumerna pouzitelnost ${usabilityText}`;
+  });
+
+  if (!summary) return;
+
+  if (!selected.length) {
+    summary.textContent = 'Metriky zdroju: vyberte alespon jeden zdroj.';
+    return;
+  }
+
+  const selectedMetrics = selected
+    .map((source) => ({
+      source,
+      metrics: metricsBySource[source.id] || {},
+      profile: getSourceTrustProfile(source)
+    }))
+    .filter(Boolean);
+
+  const avg = (values) => {
+    const numeric = values.filter((value) => Number.isFinite(Number(value))).map(Number);
+    if (!numeric.length) return null;
+    return Math.round(numeric.reduce((sum, value) => sum + value, 0) / numeric.length);
+  };
+
+  const avgHit = avg(selectedMetrics.map((item) => item.metrics.hitRate));
+  const avgFalsePositive = avg(selectedMetrics.map((item) => item.metrics.falsePositiveRate));
+  const avgUsability = avg(selectedMetrics.map((item) => item.metrics.avgUsability));
+  const verificationCount = selectedMetrics.filter(
+    (item) => item.profile.evidenceRole === 'verification'
+  ).length;
+
+  summary.textContent = [
+    `Aktivni zdroje: ${selected.length}`,
+    `Overovaci: ${verificationCount}`,
+    `Hit-rate: ${formatMetricPercent(avgHit)}`,
+    `False-positive: ${formatMetricPercent(avgFalsePositive)}`,
+    `Prumerna uzitelnost: ${formatMetricPercent(avgUsability)}`
+  ].join(' | ');
+}
+
+function applySourceModePreset(showFeedback = true) {
+  const mode = getSourceModePreset();
+  const preset = SOURCE_MODE_PRESETS[mode] || SOURCE_MODE_PRESETS.person;
+  setSourceSelection(preset.sourceIds);
+  refreshSourceTrustUi();
+  if (showFeedback) {
+    showAlert(`Aplikovan preset zdroju: ${preset.name}.`);
+  }
 }
 
 function getResultsSortMode() {
@@ -5960,6 +6630,22 @@ function normalizeWorkflowPreset(value) {
   return allowed.has(value) ? value : 'person';
 }
 
+function normalizeSourceModePreset(value) {
+  const allowed = new Set(['person', 'company', 'domain', 'photo']);
+  return allowed.has(value) ? value : 'person';
+}
+
+function getSourceModePreset() {
+  const select = document.getElementById('source-mode-preset');
+  return normalizeSourceModePreset(select && select.value);
+}
+
+function setSourceModePreset(value) {
+  const select = document.getElementById('source-mode-preset');
+  if (!select) return;
+  select.value = normalizeSourceModePreset(value);
+}
+
 function getWorkflowPreset() {
   const select = document.getElementById('workflow-preset');
   return normalizeWorkflowPreset(select && select.value);
@@ -6125,7 +6811,8 @@ function calculateValidityPercent(link) {
 
 function calculateValidityDetails(link) {
   const source = getSourceByLabel(link[0]);
-  let sourceConfidence = source ? SOURCE_CONFIDENCE[source.id] || 0.6 : 0.6;
+  const sourceProfile = getSourceTrustProfile(source);
+  let sourceConfidence = source ? getSourceConfidenceById(source.id) : 0.6;
   const queryCompleteness = getQueryCompleteness();
 
   if (source && isOfficialSource(source)) {
@@ -6140,7 +6827,12 @@ function calculateValidityDetails(link) {
   return {
     validityPercent: Math.round(clamp(weighted, 0.35, 0.98) * 100),
     sourcePercent: Math.round(sourceConfidence * 100),
-    queryPercent: Math.round(queryCompleteness * 100)
+    queryPercent: Math.round(queryCompleteness * 100),
+    sourceId: source ? source.id : '',
+    sourceType: sourceProfile.type,
+    sourceTypeLabel: sourceProfile.typeLabel,
+    evidenceRole: sourceProfile.evidenceRole,
+    evidenceRoleLabel: sourceProfile.evidenceRoleLabel
   };
 }
 
@@ -6208,7 +6900,12 @@ function getPreparedResults(links) {
       url: cleanUrl,
       validityPercent: validity.validityPercent,
       sourcePercent: validity.sourcePercent,
-      queryPercent: validity.queryPercent
+      queryPercent: validity.queryPercent,
+      sourceId: validity.sourceId,
+      sourceType: validity.sourceType,
+      sourceTypeLabel: validity.sourceTypeLabel,
+      evidenceRole: validity.evidenceRole,
+      evidenceRoleLabel: validity.evidenceRoleLabel
     };
 
     if (rawMode) {
@@ -6842,6 +7539,20 @@ function createResultRow(item, technical, options) {
   const source = document.createElement('strong');
   source.textContent = item.label;
 
+  const sourceTags = document.createElement('span');
+  sourceTags.className = 'result-source-tags';
+
+  const typeTag = document.createElement('span');
+  typeTag.className = 'result-source-tag';
+  typeTag.textContent = item.sourceTypeLabel || 'zdroj';
+  sourceTags.appendChild(typeTag);
+
+  const roleTag = document.createElement('span');
+  const isVerification = String(item.evidenceRole || '').toLowerCase() === 'verification';
+  roleTag.className = `result-source-tag ${isVerification ? 'result-source-tag-verification' : ''}`;
+  roleTag.textContent = item.evidenceRoleLabel || 'indikacni zdroj';
+  sourceTags.appendChild(roleTag);
+
   const validity = item.validityPercent;
   const confidenceIndicator = getConfidenceIndicator(validity);
   const badge = document.createElement('span');
@@ -6857,6 +7568,7 @@ function createResultRow(item, technical, options) {
   }
 
   head.appendChild(source);
+  head.appendChild(sourceTags);
   head.appendChild(badge);
 
   row.appendChild(head);
@@ -7008,15 +7720,8 @@ function getReportLinkNature(item) {
   const source = getSourceFromPreparedLabel(item.label);
   if (!source) return 'vyhledavaci odkaz';
 
-  if (
-    /^src_(interpol|europol|fbi_wanted|eu_most_wanted|dea|usmarshals|nca_uk|ofac|eu_sanctions|un_sanctions)$/.test(
-      source.id
-    )
-  ) {
-    return 'oficialni zdroj k overeni';
-  }
-
-  return 'vyhledavaci odkaz';
+  const profile = getSourceTrustProfile(source);
+  return `${profile.evidenceRoleLabel} (${profile.typeLabel})`;
 }
 
 function renderVerdict(verdict) {
@@ -7606,6 +8311,22 @@ async function saveBlobToPreferredFolder(filename, blob) {
   }
 }
 
+async function appendTextToPreferredFile(filename, text) {
+  if (!exportDirectoryHandle) return false;
+
+  try {
+    const fileHandle = await exportDirectoryHandle.getFileHandle(filename, { create: true });
+    const file = await fileHandle.getFile();
+    const writable = await fileHandle.createWritable({ keepExistingData: true });
+    await writable.seek(file.size);
+    await writable.write(text);
+    await writable.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function setExportFolderLabel(text) {
   const label = document.getElementById('export-folder-label');
   if (!label) return;
@@ -8004,6 +8725,7 @@ async function searchAll() {
       skippedOfficialSources: skippedOfficial,
       resultSnapshot: buildSearchResultSnapshot(lastResults)
     });
+    refreshSourceTrustUi();
 
     if (skippedOfficial.length) {
       const base = `Vygenerovano odkazu: ${getPreparedResults(lastResults).length}. Oficialni registry preskoceny (prilis obecny dotaz): ${skippedOfficial.join(', ')}. Pro zapnuti doplnte cele jmeno+prijmeni, delsi nick (4+), nebo telefon (7+ cisel).`;
@@ -8228,6 +8950,7 @@ function collectUiState() {
     resultsMode: getResultsMode(),
     realMatchOnly: getRealMatchOnlyEnabled(),
     workflowPreset: getWorkflowPreset(),
+    sourceModePreset: getSourceModePreset(),
     resultsMinConfidence: String(
       (document.getElementById('results-min-confidence') || {}).value || '0'
     ),
@@ -8279,6 +9002,7 @@ function loadUiState() {
     }
 
     setWorkflowPreset(state.inputs.workflowPreset || 'person');
+    setSourceModePreset(state.inputs.sourceModePreset || 'person');
 
     const minConfidence = document.getElementById('results-min-confidence');
     if (minConfidence && state.inputs.resultsMinConfidence !== undefined) {
@@ -8740,6 +9464,7 @@ function buildDataSnapshot() {
     timeline: readTimeline(),
     evidence: readEvidence(),
     tasks: readTasks(),
+    bugReports: readBugReports(),
     entities: readEntities(),
     relationships: readRelationships(),
     uiState: collectUiState(),
@@ -8788,6 +9513,10 @@ function applyImportedData(data) {
     localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(data.tasks));
   }
 
+  if (Array.isArray(data.bugReports)) {
+    localStorage.setItem(STORAGE_KEYS.bugReports, JSON.stringify(data.bugReports));
+  }
+
   if (Array.isArray(data.entities)) {
     localStorage.setItem(STORAGE_KEYS.entities, JSON.stringify(data.entities));
   }
@@ -8823,6 +9552,7 @@ function applyImportedData(data) {
   updateCaseBadge();
   renderPersons();
   renderEntityWorkspace();
+  renderBugReports();
   lastResults = [];
   renderResults([]);
   showAlert('Globalni JSON import byl uspesne nacten.');
@@ -9021,6 +9751,20 @@ function wirePrimaryActions() {
     });
   }
 
+  const sourceModePreset = document.getElementById('source-mode-preset');
+  if (sourceModePreset) {
+    sourceModePreset.addEventListener('change', () => {
+      saveUiState();
+    });
+  }
+
+  const applySourcePresetBtn = document.getElementById('apply-source-preset-btn');
+  if (applySourcePresetBtn) {
+    applySourcePresetBtn.addEventListener('click', () => {
+      applySourceModePreset(true);
+    });
+  }
+
   const clearInputsBtn = document.getElementById('clear-inputs-btn');
   if (clearInputsBtn) clearInputsBtn.addEventListener('click', clearInputs);
 
@@ -9113,6 +9857,7 @@ if (typeof window !== 'undefined') {
     wirePhotoInputPreview();
     wirePhotoDashboardControls();
     wireSearchHistoryControls();
+    wireBugReportActions();
     wireEntityWorkspace();
     wireCaseEnhancements();
     wirePrimaryActions();

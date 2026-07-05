@@ -1,0 +1,42 @@
+{
+  "name": "osint-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OSINT Finder local reverse image backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:portable": "node server.js",
+    "start:web": "node server.js",
+    "cli": "node cli.js",
+    "test": "node --test",
+    "test:server:analysis": "node --test --test-name-pattern=reverse-image.*logic.*AI.* tests/server.test.js",
+    "test:deterministic": "node --test tests/analysis-engine.test.js tests/manipulation.test.js tests/ui-mode.test.js tests/server.test.js",
+    "smoke:checklist": "node -e \"const fs=require('fs');const p='./RELEASE_SMOKE_CHECKLIST.txt';if(!fs.existsSync(p)){console.error('Checklist not found:',p);process.exit(1);}console.log(fs.readFileSync(p,'utf8'));\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "exifr": "^7.1.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.5.2",
+    "jimp": "^1.6.1",
+    "multer": "^1.4.5-lts.2",
+    "p-limit": "^3.1.0",
+    "pino": "^10.3.1",
+    "puppeteer": "^25.1.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "rate-limit-redis": "^5.0.0",
+    "redis": "^6.0.0",
+    "tesseract.js": "^7.0.0",
+    "undici": "^6.21.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.31.0",
+    "supertest": "^7.2.2"
+  }
+}

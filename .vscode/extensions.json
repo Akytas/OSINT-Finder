@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "mikestead.dotenv",
+    "christian-kohler.path-intellisense",
+    "usernamehw.errorlens",
+    "humao.rest-client",
+    "ritwickdey.liveserver"
+  ],
+  "unwantedRecommendations": ["rvest.vs-code-prettier-eslint", "rangav.vscode-thunder-client"]
+}

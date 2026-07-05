@@ -1,0 +1,21 @@
+OSINT FINDER - BEZPECNOSTNI STITEK
+==================================
+
+BEZPECNOSTNI PRVKY APLIKACE
+- Lokalni provoz v prohlizeci a na vlastnim backendu.
+- SAFE_MODE pro omezeni rizikoveho odchoziho chovani.
+- Kontrola vstupu u souboru, URL a endpointu.
+- Casove limity a osetreni chyb pri externich sluzbach.
+- Rate limit ochrana na backendu.
+- Citlive foto detaily jsou defaultne skryte.
+- Hash, raw a request logy se zobrazi jen po explicitnim rozbaleni.
+- Prace s pripadem, auditem a exporty je lokalni.
+- Aplikace vraci kandidaty k overeni, ne definitivni dukaz.
+- Verdict a doporuceni jsou rule-based, ne pseudo-AI.
+- OCR a AI analyza jsou opt-in a nejedou automaticky.
+- Portable rezim pouziva projektovy data adresar.
+
+POUZITI
+- Pouzivej v pravnim a internim ramci.
+- Kazdy relevantni zaver over minimalne ve dvou nezavislych zdrojich.
+- Konecne rozhodnuti dela vzdy clovek.

@@ -15,17 +15,13 @@
   </head>
   <body>
     <div class="container">
-      <div class="main-input">
-        <label for="main-query">🔎 Primarni dotaz</label>
-        <input id="main-query" placeholder="napr. Jan Novak, novak123, +420123456789" />
-        <p class="main-input-hint">
-          Pokud je vyplneny, ma prednost pred poli nize. Ostatni pole jsou doplnkova.
-        </p>
-      </div>
       <header class="hero">
         <div class="hero-top row-between">
           <p class="eyebrow">OSINT WORKBENCH</p>
           <div class="display-controls" aria-label="Nastavení zobrazení">
+            <button type="button" id="issue-report-quick-btn" class="issue-quick-btn">
+              Nahlasit chybu
+            </button>
             <button type="button" id="theme-toggle" class="theme-toggle">Tmavý režim</button>
           </div>
         </div>
@@ -40,17 +36,19 @@
       </div>
       <div
         id="safe-mode-controls"
-        class="small"
-        style="display: none; margin-bottom: 10px"
+        class="safe-mode-controls"
         role="group"
         aria-label="Nastavení bezpečného režimu"
       >
-        <label for="safe-mode-toggle" style="margin-right: 10px">
-          <input type="checkbox" id="safe-mode-toggle" aria-label="Bezpecny rezim" />
-          Bezpecny rezim
-        </label>
-        <button type="button" id="safe-mode-toggle-btn">Pouzit</button>
-        <span id="safe-mode-toggle-status" style="margin-left: 10px"></span>
+        <div class="safe-mode-row">
+          <label for="safe-mode-toggle" class="safe-mode-toggle-label">
+            <input type="checkbox" id="safe-mode-toggle" aria-label="Bezpecny rezim" />
+            Bezpecny rezim
+          </label>
+          <button type="button" id="safe-mode-toggle-btn">Pouzit</button>
+          <span id="safe-mode-toggle-status" class="safe-mode-toggle-status"></span>
+        </div>
+        <p class="safe-mode-help">Zaškrtni volbu a klikni na Pouzit. Bez zaškrtnutí se režim vypne.</p>
       </div>
       <div id="alert" class="alert" style="display: none" role="alert" aria-live="assertive"></div>
       <div
@@ -72,6 +70,7 @@
         <button type="button" data-tab="results" onclick="switchTab('results')">Výsledky</button>
         <button type="button" data-tab="case" onclick="switchTab('case')">Případ</button>
         <button type="button" data-tab="history" onclick="switchTab('history')">Historie</button>
+        <button type="button" data-tab="issues" onclick="switchTab('issues')">Hlášení chyb</button>
       </div>
 
       <div id="tab-search" class="tab-section">
@@ -88,6 +87,13 @@
           </p>
         </div>
 
+        <div class="main-input">
+          <label for="main-query">🔎 Primarni dotaz</label>
+          <input id="main-query" placeholder="napr. Jan Novak, novak123, +420123456789" />
+          <p class="main-input-hint">
+            Pokud je vyplneny, ma prednost pred poli nize. Ostatni pole jsou doplnkova.
+          </p>
+        </div>
         <div class="card search-card">
           <h2 class="section-title">Vyhledávání</h2>
           <details class="main-actions-more search-advanced-panel">
@@ -133,10 +139,20 @@
                 placeholder="Filtrovat zdroje..."
                 aria-label="Filtrovat zdroje"
               />
+              <select id="source-mode-preset" aria-label="Preset zdroju podle rezimu">
+                <option value="person" selected>Preset: Osoba</option>
+                <option value="company">Preset: Firma</option>
+                <option value="domain">Preset: Domena</option>
+                <option value="photo">Preset: Foto</option>
+              </select>
+              <button type="button" id="apply-source-preset-btn">Pouzit preset</button>
               <button type="button" id="collapse-all-sources">Sbalit vše</button>
               <button type="button" id="expand-all-sources">Rozbalit vše</button>
             </div>
-            <div class="source-grid">
+            <p id="source-quality-summary" class="source-quality-summary" aria-live="polite">
+              Metriky zdrojů se zobrazí po prvním vyhledávání.
+            </p>
+            <div class="form-grid case-meta-grid">
               <section class="source-group" data-group="search" aria-label="Vyhledávače">
                 <div class="source-head">
                   <h4>Vyhledávače</h4>
@@ -492,26 +508,18 @@
                 <label for="case-operator">Operator</label>
                 <input id="case-operator" placeholder="napr. pprap. Novak" aria-label="Operator" />
               </div>
-              <div>
-                <label for="case-reason">Důvod šetření</label>
-                <input
-                  id="case-reason"
-                  placeholder="napr. osoba v ohrožení"
-                  aria-label="Důvod šetření"
-                />
-              </div>
             </div>
             <div class="row template-row">
               <button type="button" onclick="saveCaseProfile()">Uložit případ</button>
-              <button type="button" onclick="exportCaseBundle()">Spis JSON (export)</button>
-              <button type="button" id="import-case-btn">Import spisu JSON</button>
+              <button type="button" class="case-export-json-btn" onclick="exportCaseBundle()">Spis JSON (export)</button>
+              <button type="button" class="case-import-json-btn" id="import-case-btn">Import spisu JSON</button>
               <input
                 type="file"
                 id="import-case-input"
                 accept="application/json,.json"
                 style="display: none"
               />
-              <button type="button" onclick="exportCaseAuditTxt()">Audit TXT (případ)</button>
+              <button type="button" class="case-audit-txt-btn" onclick="exportCaseAuditTxt()">Audit TXT (případ)</button>
               <span id="case-badge" class="folder-label">Případ: nenastavený</span>
             </div>
 
@@ -868,6 +876,65 @@
           </div>
         </div>
 
+        <div id="tab-issues" class="tab-section hidden">
+          <div class="card issue-panel" id="issue-report-card">
+            <div class="row row-between">
+              <h3>Hlášení chyb pro testování</h3>
+              <div class="row">
+                <button type="button" id="issue-export-json-btn">Export hlášení JSON</button>
+                <button type="button" id="issue-export-txt-btn">Export hlášení TXT</button>
+                <button type="button" id="issue-clear-btn">Smazat hlášení</button>
+              </div>
+            </div>
+            <p class="small history-note">
+              Zapiš co se stalo, co jsi čekal a co jsi dělal. Čas se ukládá automaticky.
+            </p>
+            <div class="form-grid issue-form-grid">
+              <div>
+                <label for="issue-report-time">Čas záznamu</label>
+                <input id="issue-report-time" type="datetime-local" aria-label="Čas záznamu" />
+              </div>
+              <div>
+                <label for="issue-report-activity">Co jste v tu chvíli dělal</label>
+                <input
+                  id="issue-report-activity"
+                  placeholder="napr. Foto OSINT hledani a export PDF"
+                  aria-label="Co jste v tu chvíli dělal"
+                />
+              </div>
+              <div>
+                <label for="issue-report-expected">Co jste cekal</label>
+                <input
+                  id="issue-report-expected"
+                  placeholder="napr. export PDF bez chyby"
+                  aria-label="Co jste čekal"
+                />
+              </div>
+              <div>
+                <label for="issue-report-actual">Co se stalo</label>
+                <input
+                  id="issue-report-actual"
+                  placeholder="napr. timeout nebo prazdny report"
+                  aria-label="Co se stalo"
+                />
+              </div>
+              <div style="grid-column: 1 / -1">
+                <label for="issue-report-note">Doplňující poznámka</label>
+                <textarea
+                  id="issue-report-note"
+                  placeholder="Napiste dalsi detail, idealne i presny krok pred chybou"
+                  aria-label="Doplňující poznámka"
+                ></textarea>
+              </div>
+            </div>
+            <div class="row history-toolbar">
+              <button type="button" id="issue-report-add-btn">Uložit hlášení</button>
+              <span id="issue-report-status" class="small"></span>
+            </div>
+            <div id="issue-report-list" class="history-list"></div>
+          </div>
+        </div>
+
         <div id="tab-results" class="tab-section hidden">
           <div id="verdict-panel" class="card" style="display: none">
             <h3>🧠 Shrnutí</h3>
@@ -951,8 +1018,8 @@
                 </div>
                 <div class="row results-actions">
                   <button type="button" onclick="switchTab('search')">← Zpet na hledani</button>
-                  <button type="button" onclick="exportPdfReport()">PDF zprava</button>
-                  <button type="button" onclick="exportReportJson()">JSON zprava</button>
+                  <button type="button" class="report-pdf-btn" onclick="exportPdfReport()">PDF zprava</button>
+                  <button type="button" class="report-json-btn" onclick="exportReportJson()">JSON zprava</button>
                   <button type="button" onclick="openAllResults()">Otevrit vse</button>
                   <button type="button" onclick="copyAllResults()">Kopirovat vse</button>
                 </div>
